@@ -1,0 +1,24 @@
+name:                trie-simple-not-applicative
+version:             0.1.0.0
+synopsis:            Data.Trie.Map is not an Applicative
+description:         Please see README.md
+author:              Koji Miyazato
+maintainer:          viercc@gmail.com
+copyright:           Koji Miyazato
+build-type:          Simple
+-- extra-source-files:
+cabal-version:       >=1.10
+
+executable tmap-test-monad
+  hs-source-dirs: app
+  main-is:        TestTMap.hs
+  other-modules:  Data.Trie.Map.Gen,
+                  Common
+  build-depends: base >= 4.8 && < 5,
+                 containers,
+                 QuickCheck,
+                 checkers,
+                 trie-simple
+  ghc-options: -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
+  default-language: Haskell2010
+
