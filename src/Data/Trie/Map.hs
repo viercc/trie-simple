@@ -22,6 +22,7 @@ module Data.Trie.Map(
   union, unionWith,
   intersection, intersectionWith,
   difference, differenceWith,
+  appendWith,
   
   -- * Conversion
   toList, fromList,
@@ -239,6 +240,44 @@ differenceWith f x y = fromMaybe empty $ go x y
           (Just a,  Just b)  -> f a b
         ez = Map.differenceWith go ex ey
 
+{- |
+Make new @TMap@ from two @TMap@s. Constructed @TMap@
+has keys which are concatenation of any combination from
+two input maps.
+
+Corresponding values for these keys are combined with given function
+of type @(x -> y -> z)@. If two different concatenations yield
+a same key, Corresponding values for these keys are combined with
+second function of type @(z -> z -> z)@.
+
+Example
+=======
+
+> let x = fromList [("a", 1), ("aa", 2)]
+>     y = fromList [("aa", 10), ("aaa", 20)]
+> 
+> appendWith mult add x y =
+>   fromList [ ("a" ++ "aa", 1 `mult` 10)
+>            , ("a" ++ "aaa",                        --  == "aa" + "aa"
+>                 (1 `mult` 20) `add` (2 `mult` 10))
+>            , ("aa" ++ "aaa", 2 `mult` 20) ]
+
+-}
+appendWith :: (Ord c) => (x -> y -> z) -> (z -> z -> z) -> TMap c x -> TMap c y -> TMap c z
+appendWith f g x y =
+  if null y
+    then empty
+    else go x
+  where
+    go (TMap (Node Nothing e)) =
+      let e' = Map.map go e
+      in TMap (Node Nothing e')
+    go (TMap (Node (Just ax) e)) =
+      let TMap (Node maz e') = fmap (f ax) y
+          e'' = Map.map go e
+          e''' = Map.unionWith (unionWith g) e' e''
+      in TMap (Node maz e''')
+
 -- * Instances
 
 instance Functor (TMap c) where
@@ -325,6 +364,13 @@ toParser__ :: Alternative f => (c -> f ()) -> TMap c a -> f ()
 toParser__ f = void . toParser_ f
 
 -- * Traversing with keys
+
+-- | Same semantics to following defintion, but have
+--   more efficient implementation.
+--
+-- > traverseWithKey f = fmap fromAscList .
+-- >                     traverse (\(cs,a) -> (,) cs <$> f cs a) .
+-- >                     toAscList
 traverseWithKey :: (Applicative f) =>
   ([c] -> a -> f b) -> TMap c a -> f (TMap c b)
 traverseWithKey f = go []
@@ -337,6 +383,12 @@ traverseWithKey f = go []
                      ma
       in TMap <$> (Node <$> mb <*> e')
 
+-- | Same semantics to following defintion, but have
+--   more efficient implementation.
+--
+-- > traverseWithKey f = fmap fromAscList .
+-- >                     map (\(cs,a) -> (cs,  f cs a)) .
+-- >                     toAscList
 mapWithKey :: ([c] -> a -> b) -> TMap c a -> TMap c b
 mapWithKey f = runIdentity . traverseWithKey (\k a -> Identity (f k a))
 
