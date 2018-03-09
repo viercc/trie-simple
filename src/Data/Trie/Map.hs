@@ -27,10 +27,14 @@ module Data.Trie.Map(
   toList, fromList,
   toAscList, fromAscList,
   toMap, fromMap,
+  keysTSet, fromTSet,
 
   -- * Parsing
   toParser, toParser_, toParser__,
 
+  -- * Traversing with keys
+  traverseWithKey, mapWithKey, foldMapWithKey,
+  
   -- * Internals
   Node(..),
   foldTMap,
@@ -38,6 +42,9 @@ module Data.Trie.Map(
 where
 
 import Prelude hiding (null)
+
+import           Data.Functor.Identity
+import           Data.Functor.Const
 
 import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap(empty)
@@ -50,6 +57,9 @@ import qualified Data.List        as List (foldl')
 import           Data.Maybe       (fromMaybe, isJust, isNothing)
 import           Data.Map.Lazy    (Map)
 import qualified Data.Map.Lazy    as Map
+
+import qualified Data.Trie.Set    as TSet
+import           Data.Trie.Set    (TSet(..))
 
 import Control.DeepSeq
 
@@ -279,6 +289,20 @@ toMap = Map.fromDistinctAscList . toAscList
 fromMap :: (Eq c) => Map [c] a -> TMap c a
 fromMap = fromAscList . Map.toAscList
 
+keysTSet :: TMap c a -> TSet c
+keysTSet = foldTMap keysTSet'
+  where
+    keysTSet' (Node ma e) =
+      TSet (TSet.Node (isJust ma) e)
+
+fromTSet :: ([c] -> a) -> TSet c -> TMap c a
+fromTSet f = go []
+  where
+    go q (TSet (TSet.Node a e)) =
+      let e' = Map.mapWithKey (\c -> go (c:q)) e
+          a' = if a then Just (f (reverse q)) else Nothing
+      in TMap (Node a' e')
+
 -- * Parsing
 
 toParser :: Alternative f => (c -> f c') -> TMap c a -> f ([c'], a)
@@ -299,6 +323,25 @@ toParser_ f = foldTMap toParser'
 
 toParser__ :: Alternative f => (c -> f ()) -> TMap c a -> f ()
 toParser__ f = void . toParser_ f
+
+-- * Traversing with keys
+traverseWithKey :: (Applicative f) =>
+  ([c] -> a -> f b) -> TMap c a -> f (TMap c b)
+traverseWithKey f = go []
+  where
+    go q (TMap (Node ma e)) =
+      let step c = go (c : q)
+          e' = Map.traverseWithKey step e
+          mb = maybe (pure Nothing)
+                     (\a -> Just <$> f (reverse q) a)
+                     ma
+      in TMap <$> (Node <$> mb <*> e')
+
+mapWithKey :: ([c] -> a -> b) -> TMap c a -> TMap c b
+mapWithKey f = runIdentity . traverseWithKey (\k a -> Identity (f k a))
+
+foldMapWithKey :: (Monoid r) => ([c] -> a -> r) -> TMap c a -> r
+foldMapWithKey f = getConst . traverseWithKey (\k a -> Const (f k a))
 
 -- * Other operations
 
