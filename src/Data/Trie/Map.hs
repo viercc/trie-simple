@@ -5,6 +5,7 @@ module Data.Trie.Map(
   TMap(..),
   -- * Queries
   match,
+  lookup,
   member, notMember,
   null, count,
   keys, elems,
@@ -42,10 +43,12 @@ module Data.Trie.Map(
 )
 where
 
-import Prelude hiding (null)
+import Prelude hiding (lookup, null)
 
 import           Data.Functor.Identity
 import           Data.Functor.Const
+
+import           Data.Semigroup
 
 import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap(empty)
@@ -87,9 +90,12 @@ match (c:cs)   (TMap (Node _  e)) =
     Nothing -> (Nothing, empty)
     Just t' -> match cs t'
 
+lookup :: (Ord c) => [c] -> TMap c a -> Maybe a
+lookup cs = fst . match cs
+
 member, notMember :: (Ord c) => [c] -> TMap c a -> Bool
-member cs = isJust . fst . match cs
-notMember cs = isNothing . fst . match cs
+member cs = isJust . lookup cs
+notMember cs = isNothing . lookup cs
 
 null :: TMap c a -> Bool
 null (TMap (Node ma e)) = isNothing ma && Map.null e
@@ -248,23 +254,26 @@ two input maps.
 Corresponding values for these keys are combined with given function
 of type @(x -> y -> z)@. If two different concatenations yield
 a same key, Corresponding values for these keys are combined with
-second function of type @(z -> z -> z)@.
+a 'Semigroup' operation @<>@.
+
+There is no guarantees on which order corresponding duplicate
+keys are combined. So it must be commutative semigroup to get stable result.
 
 Example
 =======
 
-> let x = fromList [("a", 1), ("aa", 2)]
->     y = fromList [("aa", 10), ("aaa", 20)]
+> let x = fromList [("a", Sum 1), ("aa", Sum 2)]
+>     y = fromList [("aa", Sum 10), ("aaa", Sum 20)]
 > 
-> appendWith mult add x y =
->   fromList [ ("a" ++ "aa", 1 `mult` 10)
->            , ("a" ++ "aaa",                        --  == "aa" + "aa"
->                 (1 `mult` 20) `add` (2 `mult` 10))
->            , ("aa" ++ "aaa", 2 `mult` 20) ]
+> appendWith (*) x y =
+>   fromList [ ("aaa", Sum $ 1 * 10)
+>            , ("aaaa", Sum $ 1 * 20 + 2 * 10)
+>            , ("aaaaa", Sum $ 2 * 20) ]
 
 -}
-appendWith :: (Ord c) => (x -> y -> z) -> (z -> z -> z) -> TMap c x -> TMap c y -> TMap c z
-appendWith f g x y =
+appendWith :: (Ord c, Semigroup z) => (x -> y -> z) ->
+  TMap c x -> TMap c y -> TMap c z
+appendWith f x y =
   if null y
     then empty
     else go x
@@ -275,7 +284,7 @@ appendWith f g x y =
     go (TMap (Node (Just ax) e)) =
       let TMap (Node maz e') = fmap (f ax) y
           e'' = Map.map go e
-          e''' = Map.unionWith (unionWith g) e' e''
+          e''' = Map.unionWith (unionWith (<>)) e' e''
       in TMap (Node maz e''')
 
 -- * Instances
@@ -290,6 +299,16 @@ instance Traversable (TMap c) where
   traverse f = go
     where
       go (TMap (Node a e)) = TMap <$> (Node <$> traverse f a <*> traverse go e)
+
+-- | 'unionWith'-based
+instance (Ord c, Semigroup a) => Semigroup (TMap c a) where
+  (<>) = unionWith (<>)
+  stimes n = fmap (stimes n)
+
+-- | 'unionWith'-based
+instance (Ord c, Semigroup a) => Monoid (TMap c a) where
+  mempty = empty
+  mappend = (<>)
 
 -- * Conversion
 

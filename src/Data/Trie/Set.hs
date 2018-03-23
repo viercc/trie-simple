@@ -32,6 +32,7 @@ import Prelude hiding (null)
 import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap
 
+import           Data.Semigroup
 import           Data.Foldable (asum)
 import qualified Data.List     as List (foldl')
 import           Data.Maybe    (fromMaybe)
@@ -55,10 +56,29 @@ newtype TSet c = TSet { getNode :: Node c (TSet c) }
   deriving (Eq, Ord)
 
 instance Show c => Show (TSet c) where
-  showsPrec p t = showParen (p > 10) $ showString "fromList " . showsPrec 11 (enumerate t)
+  showsPrec p t = showParen (p > 10) $
+    showString "fromList " . showsPrec 11 (enumerate t)
 
 instance (NFData c) => NFData (TSet c) where
   rnf (TSet node) = rnf node
+
+{-
+
+The canonical Monoid instance could be (epsilon, append),
+but here I choose (empty, union) to align to Set instance.
+Semigroup instance must follow how Monoid is defined.
+
+-}
+
+-- | Semigroup(union)
+instance (Ord c) => Semigroup (TSet c) where
+  (<>) = union
+  stimes = stimesIdempotent
+
+-- | Monoid(empty, union)
+instance (Ord c) => Monoid (TSet c) where
+  mempty = empty
+  mappend = (<>)
 
 -- * Queries
 member :: (Ord c) => [c] -> TSet c -> Bool
