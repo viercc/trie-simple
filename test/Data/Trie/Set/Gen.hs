@@ -1,4 +1,4 @@
-module Data.Trie.Gen(
+module Data.Trie.Set.Gen(
   C(..),
   TSet'(..),
   genTSet,

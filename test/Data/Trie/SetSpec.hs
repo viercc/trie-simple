@@ -1,4 +1,4 @@
-module Data.Trie.TrieSpec(
+module Data.Trie.SetSpec(
   spec
 ) where
 
@@ -10,7 +10,7 @@ import           Data.Set            (Set)
 import qualified Data.Set            as Set
 
 import           Data.Trie.Set     as T
-import           Data.Trie.Gen
+import           Data.Trie.Set.Gen
 
 spec :: Spec
 spec = do

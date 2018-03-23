@@ -28,8 +28,10 @@ test-suite trie-simple-test
   type:           exitcode-stdio-1.0
   hs-source-dirs: test
   main-is:        Spec.hs
-  other-modules:  Data.Trie.TrieSpec,
-                  Data.Trie.Gen,
+  other-modules:  Data.Trie.SetSpec,
+                  Data.Trie.Set.Gen,
+                  Data.Trie.MapSpec,
+                  Data.Trie.Map.Gen,
                   Common
   build-depends: base >= 4.8 && < 5,
                  containers,
