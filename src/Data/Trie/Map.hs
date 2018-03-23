@@ -363,24 +363,33 @@ fromTSet f = go []
 
 -- * Parsing
 
-toParser :: Alternative f => (c -> f c') -> TMap c a -> f ([c'], a)
-toParser f = foldTMap toParser'
+toParser :: Alternative f =>
+  (c -> f c') -> -- ^ char
+  f eot ->       -- ^ eot
+  TMap c a -> f ([c'], a)
+toParser f eot = foldTMap toParser'
   where
     toParser' (Node ma e) =
-      maybe Ap.empty (\a -> pure ([], a)) ma <|>
+      maybe Ap.empty (\a -> ([], a) <$ eot) ma <|>
       F.asum [ consFst <$> f c <*> p' | (c, p') <- Map.toAscList e ]
     
     consFst c (cs, a) = (c:cs, a)
 
-toParser_ :: Alternative f => (c -> f ()) -> TMap c a -> f a
-toParser_ f = foldTMap toParser'
+toParser_ :: Alternative f =>
+  (c -> f c') -> -- ^ char
+  f eot ->       -- ^ eot
+  TMap c a -> f a
+toParser_ f eot = foldTMap toParser'
   where
     toParser' (Node ma e) =
-      maybe Ap.empty pure ma <|>
+      maybe Ap.empty (<$ eot) ma <|>
       F.asum [ f c *> p' | (c, p') <- Map.toAscList e ]
 
-toParser__ :: Alternative f => (c -> f ()) -> TMap c a -> f ()
-toParser__ f = void . toParser_ f
+toParser__ :: Alternative f =>
+  (c -> f c') -> -- ^ char
+  f eot ->       -- ^ eot
+  TMap c a -> f ()
+toParser__ f eot = void . toParser_ f eot
 
 -- * Traversing with keys
 

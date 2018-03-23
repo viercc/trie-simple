@@ -227,21 +227,33 @@ fromSet = fromAscList . Set.toAscList
 
 -- | Construct a \"parser\" which recognizes member strings
 --   of a TSet.
-toParser :: (Alternative f) => (c -> f a) -> TSet c -> f [a]
-toParser char = foldTSet enumerateA'
+--
+--   * @char@ constructs a parser which recognizes a character.
+--   * @eot@ recognizes the end of a token.
+toParser :: (Alternative f) =>
+  (c -> f a) -> -- ^ char
+  f b ->        -- ^ eot
+  TSet c -> f [a]
+toParser char eot = foldTSet enumerateA'
   where
     enumerateA' (Node a e) =
-      (if a then pure [] else Ap.empty) <|>
+      (if a then [] <$ eot else Ap.empty) <|>
       asum [ (:) <$> char c <*> as | (c, as) <- Map.toAscList e ]
 
 -- | Construct a \"parser\" which recognizes member strings
 --   of a TSet.
 --   It discards the information which string it is recognizing.
-toParser_ :: (Alternative f) => (c -> f ()) -> TSet c -> f ()
-toParser_ char = foldTSet enumerateA'
+--
+--   * @char@ constructs a parser which recognizes a character.
+--   * @eot@ recognizes the end of a token.
+toParser_ :: (Alternative f) =>
+  (c -> f a) -> -- ^ char
+  f b ->        -- ^ eot
+  TSet c -> f ()
+toParser_ char eot = foldTSet enumerateA'
   where
     enumerateA' (Node a e) =
-      (if a then pure () else Ap.empty) <|>
+      (if a then () <$ eot else Ap.empty) <|>
       asum [ char c *> as | (c, as) <- Map.toAscList e ]
 
 ----------------------
