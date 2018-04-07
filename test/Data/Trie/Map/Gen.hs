@@ -7,6 +7,7 @@ module Data.Trie.Map.Gen(
 import           Test.QuickCheck hiding (shrinkMapBy)
 
 import           Data.Trie.Map
+import           Data.Trie.Map.Internal
 import           Common
 
 newtype TMap' = TMap' (TMap C Int)

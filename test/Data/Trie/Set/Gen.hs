@@ -8,6 +8,7 @@ module Data.Trie.Set.Gen(
 import           Test.QuickCheck hiding (shrinkMapBy)
 
 import           Data.Trie.Set
+import           Data.Trie.Set.Internal
 import           Common
 
 newtype TSet' = TSet' (TSet C)
