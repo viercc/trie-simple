@@ -177,6 +177,7 @@ difference_ (TSet (Node ax ex)) (TSet (Node ay ey)) =
     ez = Map.differenceWith difference_ ex ey
 
 append :: (Ord c) => TSet c -> TSet c -> TSet c
+append _ y | null y = empty
 append (TSet (Node ax ex)) y = f (TSet (Node False ez))
   where
     ez = Map.map (`append` y) ex

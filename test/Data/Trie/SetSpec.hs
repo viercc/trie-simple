@@ -5,9 +5,9 @@ module Data.Trie.SetSpec(
 import           Test.Hspec
 import           Test.QuickCheck
 
-import           Data.List (inits, tails)
-import           Data.Set            (Set)
-import qualified Data.Set            as Set
+import           Data.List         (inits, tails)
+import           Data.Set          (Set)
+import qualified Data.Set          as Set
 
 import           Data.Trie.Set     as T
 import           Data.Trie.Set.Gen
@@ -24,14 +24,14 @@ spec = do
     property $ \(TSet' t) -> Prelude.null (enumerate t) === T.null t
   specify "length . enumerate = count" $
     property $ \(TSet' t) -> length (enumerate t) === count t
-  
+
   specify "member t = (`Set.member` toSet t)" $
     property $ \(TSet' t) ->
       let strSet = toSet t
       in property $ \str -> member str t == Set.member str strSet
   specify "forAll (str `in` enumerate t). member str t" $
     property $ \(TSet' t) -> all (`member` t) <$> acceptStrs t
-    
+
   specify "toSet (union a b) = Set.union (toSet a) (toSet b)" $
     property $ \(TSet' a) (TSet' b) ->
       toSet (union a b) == Set.union (toSet a) (toSet b)
@@ -41,10 +41,12 @@ spec = do
   specify "toSet (difference a b) = Set.difference (toSet a) (toSet b)" $
     property $ \(TSet' a) (TSet' b) ->
       toSet (difference a b) == Set.difference (toSet a) (toSet b)
+  specify "null (append a empty)" $
+    property $ \(TSet' a) -> T.null (append a empty) == True
   specify "toSet (append a b) = setAppend (toSet a) (toSet b)" $
     property $ \(TSet' a) (TSet' b) ->
       toSet (append a b) == setAppend (toSet a) (toSet b)
-  
+
   specify "toSet (prefixes a) = setPrefixes (toSet a)" $
     property $ \(TSet' a) ->
       toSet (prefixes a) === setPrefixes (toSet a)
