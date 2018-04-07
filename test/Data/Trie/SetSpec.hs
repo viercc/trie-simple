@@ -41,12 +41,23 @@ spec = do
   specify "toSet (difference a b) = Set.difference (toSet a) (toSet b)" $
     property $ \(TSet' a) (TSet' b) ->
       toSet (difference a b) == Set.difference (toSet a) (toSet b)
-  specify "null (append a empty)" $
-    property $ \(TSet' a) -> T.null (append a empty) == True
   specify "toSet (append a b) = setAppend (toSet a) (toSet b)" $
     property $ \(TSet' a) (TSet' b) ->
       toSet (append a b) == setAppend (toSet a) (toSet b)
 
+  specify "validTSet (union a b)" $
+    property $ \(TSet' a) (TSet' b) ->
+      validTSet (union a b)
+  specify "validTSet (intersection a b)" $
+    property $ \(TSet' a) (TSet' b) ->
+      validTSet (intersection a b)
+  specify "validTSet (difference a b)" $
+    property $ \(TSet' a) (TSet' b) ->
+      validTSet (difference a b)
+  specify "validTSet (append a b)" $
+    property $ \(TSet' a) (TSet' b) ->
+      validTSet (append a b)
+  
   specify "toSet (prefixes a) = setPrefixes (toSet a)" $
     property $ \(TSet' a) ->
       toSet (prefixes a) === setPrefixes (toSet a)

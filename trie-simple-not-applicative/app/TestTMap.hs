@@ -13,6 +13,8 @@ import           Data.Trie.Map.Gen
 import qualified Data.Map.Lazy     as Map
 import           Data.Maybe        (fromMaybe)
 
+import           Data.Semigroup
+
 main :: IO ()
 main = do
   quickBatch (functor typeTag3)
@@ -43,22 +45,7 @@ applicativeAssocCounterexample = (t,u,t)
 
 instance (Ord c) => Applicative (TMap c) where
   pure = just
-  liftA2 = product_
-
-product_ :: (Ord c) => (x -> y -> z) -> TMap c x -> TMap c y -> TMap c z
-product_ f x y =
-  if T.null y
-    then empty
-    else go x
-  where
-    go (TMap (Node Nothing e)) =
-      let e' = Map.map go e
-      in TMap (Node Nothing e')
-    go (TMap (Node (Just ax) e)) =
-      let TMap (Node maz e') = fmap (f ax) y
-          e'' = Map.map go e
-          e''' = Map.unionWith union e' e''
-      in TMap (Node maz e''')
+  liftA2 f ta tb = getFirst <$> appendWith (\a b -> First (f a b)) ta tb
 
 instance (Ord c) => Monad (TMap c) where
   return = just

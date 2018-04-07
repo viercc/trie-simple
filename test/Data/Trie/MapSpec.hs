@@ -52,6 +52,19 @@ spec = do
     property $ \(TMap' a) (TMap' b) ->
       toMap (getSum <$> appendWith (\x y -> Sum (x * y)) a b) ==
       mapAppend (toMap a) (toMap b)
+      
+  specify "validTMap (union a b)" $
+    property $ \(TMap' a) (TMap' b) ->
+      validTMap (union a b)
+  specify "validTMap (intersection a b)" $
+    property $ \(TMap' a) (TMap' b) ->
+      validTMap (intersection a b)
+  specify "validTMap (difference a b)" $
+    property $ \(TMap' a) (TMap' b) ->
+      validTMap (difference a b)
+  specify "validTMap (append a b)" $
+    property $ \(TMap' a) (TMap' b) ->
+      validTMap (getSum <$> appendWith (\x y -> Sum (x * y)) a b)
 
 mapAppend :: (Ord c) => Map [c] Int -> Map [c] Int -> Map [c] Int
 mapAppend ass bss =
