@@ -232,9 +232,9 @@ fromSet = fromAscList . Set.toAscList
 --   * @char@ constructs a parser which recognizes a character.
 --   * @eot@ recognizes the end of a token.
 toParser :: (Alternative f) =>
-  (c -> f a) -> -- ^ char
-  f b ->        -- ^ eot
-  TSet c -> f [a]
+  (c -> f a) -- ^ char
+  -> f b     -- ^ eot
+  -> TSet c -> f [a]
 toParser char eot = foldTSet enumerateA'
   where
     enumerateA' (Node a e) =
@@ -248,9 +248,9 @@ toParser char eot = foldTSet enumerateA'
 --   * @char@ constructs a parser which recognizes a character.
 --   * @eot@ recognizes the end of a token.
 toParser_ :: (Alternative f) =>
-  (c -> f a) -> -- ^ char
-  f b ->        -- ^ eot
-  TSet c -> f ()
+  (c -> f a) -- ^ char
+  -> f b     -- ^ eot
+  -> TSet c -> f ()
 toParser_ char eot = foldTSet enumerateA'
   where
     enumerateA' (Node a e) =

@@ -252,14 +252,13 @@ two input maps.
 
 Corresponding values for these keys are combined with given function
 of type @(x -> y -> z)@. If two different concatenations yield
-a same key, Corresponding values for these keys are combined with
+a same key, corresponding values for these keys are combined with
 a 'Semigroup' operation @<>@.
 
-There is no guarantees on which order corresponding duplicate
-keys are combined. So it must be commutative semigroup to get stable result.
+There is no guarantees on which order duplicate values are combined with @<>@.
+So it must be commutative semigroup to get a stable result.
 
-Example
-=======
+===== Example
 
 > let x = fromList [("a", 1), ("aa", 2)]     :: TMap Char (Sum Int)
 >     y = fromList [("aa", 10), ("aaa", 20)] :: TMap Char (Sum Int)
@@ -363,9 +362,9 @@ fromTSet f = go []
 -- * Parsing
 
 toParser :: Alternative f =>
-  (c -> f c') -> -- ^ char
-  f eot ->       -- ^ eot
-  TMap c a -> f ([c'], a)
+     (c -> f c') -- ^ char
+  -> f eot       -- ^ eot
+  -> TMap c a -> f ([c'], a)
 toParser f eot = foldTMap toParser'
   where
     toParser' (Node ma e) =
@@ -375,9 +374,9 @@ toParser f eot = foldTMap toParser'
     consFst c (cs, a) = (c:cs, a)
 
 toParser_ :: Alternative f =>
-  (c -> f c') -> -- ^ char
-  f eot ->       -- ^ eot
-  TMap c a -> f a
+     (c -> f c') -- ^ char
+  -> f eot       -- ^ eot
+  -> TMap c a -> f a
 toParser_ f eot = foldTMap toParser'
   where
     toParser' (Node ma e) =
@@ -385,9 +384,9 @@ toParser_ f eot = foldTMap toParser'
       F.asum [ f c *> p' | (c, p') <- Map.toAscList e ]
 
 toParser__ :: Alternative f =>
-  (c -> f c') -> -- ^ char
-  f eot ->       -- ^ eot
-  TMap c a -> f ()
+     (c -> f c') -- ^ char
+  -> f eot       -- ^ eot
+  -> TMap c a -> f ()
 toParser__ f eot = void . toParser_ f eot
 
 -- * Traversing with keys
