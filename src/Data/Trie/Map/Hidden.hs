@@ -59,7 +59,6 @@ import qualified Data.List              as List (foldl')
 import           Data.Map.Lazy          (Map)
 import qualified Data.Map.Lazy          as Map
 import           Data.Maybe             (fromMaybe, isJust, isNothing)
-import           Data.Traversable
 
 import           Data.Trie.Set.Internal (TSet (..))
 import qualified Data.Trie.Set.Internal as TSet
@@ -288,10 +287,16 @@ appendWith f x y =
 -- * Instances
 
 instance Functor (TMap c) where
-  fmap = fmapDefault
+  fmap f = go
+    where
+      go (TMap (Node ma e)) = TMap (Node (fmap f ma) (fmap go e))
 
 instance Foldable (TMap c) where
-  foldMap = foldMapDefault
+  foldMap f = go
+    where
+      go (TMap (Node ma e)) = case ma of
+        Nothing -> foldMap go e
+        Just a  -> f a `mappend` foldMap go e
 
 instance Traversable (TMap c) where
   traverse f = go
