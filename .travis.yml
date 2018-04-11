@@ -37,4 +37,5 @@ install:
 
 script:
 # Build the package, its tests, and its docs and run the tests
-- stack --no-terminal build --test --bench --no-run-benchmarks --haddock --no-haddock-deps
+- stack --no-terminal build --test --bench --no-run-tests --no-run-benchmarks --haddock --no-haddock-deps
+- stack --no-terminal test --ta='--qc-max-size=30'
