@@ -9,6 +9,7 @@ import Data.Maybe (isJust)
 import qualified Data.Map.Lazy as Map
 
 import           Data.Trie.Map
+import           Data.Trie.Map.Internal
 import           Common
 
 data U = U

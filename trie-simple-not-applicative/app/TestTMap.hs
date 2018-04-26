@@ -7,7 +7,8 @@ import           Test.QuickCheck
 import           Test.QuickCheck.Checkers
 import           Test.QuickCheck.Classes
 
-import           Data.Trie.Map     as T
+import           Data.Trie.Map          as T
+import           Data.Trie.Map.Internal as T
 import           Data.Trie.Map.Gen
 
 import qualified Data.Map.Lazy     as Map
@@ -58,10 +59,8 @@ flatMap_ k = go
       let e' = Map.mapMaybe go e
       in if Map.null e' then Nothing else Just (TMap (Node Nothing e'))
     go (TMap (Node (Just a) e)) =
-      do let tb@(TMap (Node mb e')) = k a
-         guard (not (T.null tb))
-         let e'' = Map.mapMaybe go e
-             e''' = Map.unionWith union e' e''
-             result = TMap (Node mb e''')
-         guard (not (T.null result))
-         return result
+      let TMap (Node mb e') = k a
+          e'' = Map.mapMaybe go e
+          e''' = Map.unionWith union e' e''
+          result = TMap (Node mb e''')
+      in if T.null result then Nothing else Just result
