@@ -186,18 +186,15 @@ append (TSet (Node ax ex)) y = f (TSet (Node False ez))
 -- * Other operations
 
 prefixes :: TSet c -> TSet c
-prefixes = foldTSet prefixes'
+prefixes t | null t    = empty
+           | otherwise = foldTSet prefixes' t
   where
-    getRootAcc (TSet (Node a _)) = a
-    prefixes' (Node a e) =
-      let isNonEmpty = a || any getRootAcc e
-      in TSet (Node isNonEmpty e)
+    prefixes' (Node _ e) = TSet (Node True e)
 
 suffixes :: (Ord c) => TSet c -> TSet c
-suffixes = List.foldl' union empty . suffixes'
+suffixes = paraTSet suffixes'
   where
-    suffixes' = paraTSet suffixes''
-    suffixes'' nx = TSet (fst <$> nx) : foldMap snd nx
+    suffixes' nx = union (TSet (fst <$> nx)) (foldMap snd nx)
 
 infixes :: (Ord c) => TSet c -> TSet c
 infixes = suffixes . prefixes
