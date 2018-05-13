@@ -14,7 +14,7 @@ executable tmap-test-monad
   main-is:        TestTMap.hs
   other-modules:  Data.Trie.Map.Gen,
                   Common
-  build-depends: base >= 4.8 && < 5,
+  build-depends: base >= 4.9 && < 5,
                  containers,
                  QuickCheck,
                  checkers,

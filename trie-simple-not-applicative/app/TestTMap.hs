@@ -46,7 +46,10 @@ applicativeAssocCounterexample = (t,u,t)
 
 instance (Ord c) => Applicative (TMap c) where
   pure = just
-  liftA2 f ta tb = getFirst <$> appendWith (\a b -> First (f a b)) ta tb
+  (<*>) = liftA2_ ($)
+
+liftA2_ :: (Ord c) => (a -> b -> r) -> TMap c a -> TMap c b -> TMap c r
+liftA2_ f ta tb = getFirst <$> appendWith (\a b -> First (f a b)) ta tb
 
 instance (Ord c) => Monad (TMap c) where
   return = just
