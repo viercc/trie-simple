@@ -5,6 +5,7 @@ module Data.Trie.Set(
   member, notMember,
   beginWith,
   null, count, enumerate,
+  foldr,
   -- * Construction
   empty, epsilon,
   string, strings,
@@ -23,5 +24,5 @@ module Data.Trie.Set(
 )
 where
 
-import Prelude hiding (null)
+import Prelude hiding (foldr, null)
 import Data.Trie.Set.Hidden

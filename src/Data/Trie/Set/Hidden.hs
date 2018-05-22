@@ -6,6 +6,7 @@ module Data.Trie.Set.Hidden(
   member, notMember,
   beginWith,
   null, count, enumerate,
+  foldr,
   -- * Construction
   empty, epsilon,
   string, strings,
@@ -27,14 +28,14 @@ module Data.Trie.Set.Hidden(
 )
 where
 
-import Prelude hiding (null)
+import Prelude hiding (foldr, null)
 
 import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap
 
 import           Data.Semigroup
 import           Data.Foldable (asum)
-import qualified Data.List     as List (foldl')
+import qualified Data.List     as List (foldr, foldl')
 import           Data.Maybe    (fromMaybe)
 import           Data.Map.Lazy (Map)
 import qualified Data.Map.Lazy as Map
@@ -109,12 +110,26 @@ count = foldTSet count'
     count' (Node a e) =
       (if a then 1 else 0) + sum e
 
+
 enumerate :: TSet c -> [[c]]
-enumerate = foldTSet enumerate'
+--enumerate = foldr (:) []
+enumerate = foldTSet step
   where
-    enumerate' (Node a e) =
-      [ []   | a ] ++ 
-      [ c:cs | (c,css) <- Map.toAscList e, cs <- css ]
+    step (Node a e) =
+      [ [] | a ] ++
+      [ x:xs | (x,xss) <- Map.toAscList e
+             , xs <- xss ]
+
+{-
+from this post by u/foBrowsing:
+  https://www.reddit.com/r/haskell/comments/8krv31/how_to_traverse_a_trie/dzaktkn/
+-}
+foldr :: ([c] -> r -> r) -> r -> TSet c -> r
+foldr f z (TSet (Node a e))
+  | a         = f [] r
+  | otherwise = r
+  where
+    r = Map.foldrWithKey (\x tr xs -> foldr (f . (:) x) xs tr) z e
 
 -- * Construction
 empty :: TSet c
@@ -124,7 +139,7 @@ epsilon :: TSet c
 epsilon = TSet (Node True Map.empty)
 
 string :: [c] -> TSet c
-string = foldr cons epsilon
+string = List.foldr cons epsilon
   where
     cons c t = TSet (Node False (Map.singleton c t))
 
