@@ -5,7 +5,7 @@ module Data.Trie.SetSpec(
 import           Test.Hspec
 import           Test.QuickCheck
 
-import           Data.List         (inits, tails)
+import           Data.List         (sort, inits, tails)
 import           Data.Set          (Set)
 import qualified Data.Set          as Set
 
@@ -16,6 +16,8 @@ spec :: Spec
 spec = do
   specify "enumerate empty = []" $
     enumerate (empty :: TSet C) `shouldSatisfy` Prelude.null
+  specify "enumerate epsilon = [[]]" $
+    enumerate (epsilon :: TSet C) `shouldBe` [[]]
   specify "enumerate . string = (:[])" $
     property $ \str -> enumerate (string (str :: [C])) === [str]
   specify "enumerate . strings = Set.toAscList . Set.fromList" $
@@ -24,15 +26,21 @@ spec = do
     property $ \(TSet' t) -> Prelude.null (enumerate t) === T.null t
   specify "length . enumerate = count" $
     property $ \(TSet' t) -> length (enumerate t) === count t
-  specify "enumerateViaFoldr = enumerate" $
-    property $ \(TSet' t) -> enumerateViaFoldr t == enumerate t
 
+  specify "toSet (insert xs a) = Set.insert xs (toSet a)" $
+    property $ \xs (TSet' t) -> toSet (T.insert xs t) == Set.insert xs (toSet t)
+  specify "toSet (delete xs a) = Set.delete xs (toSet a)" $
+    property $ \xs (TSet' t) -> toSet (T.delete xs t) == Set.delete xs (toSet t)
+  
   specify "member t = (`Set.member` toSet t)" $
-    property $ \(TSet' t) ->
+    property $ \(TSet'' t) ->
       let strSet = toSet t
       in property $ \str -> member str t == Set.member str strSet
   specify "forAll (str `in` enumerate t). member str t" $
-    property $ \(TSet' t) -> all (`member` t) <$> acceptStrs t
+    property $ \(TSet'' t) -> all (`member` t) <$> acceptStrs t
+  specify "member (xs ++ ys) t = member ys (beginWith t xs)" $
+    property $ \xs ys (TSet'' t) ->
+      member (xs ++ ys) t == member ys (beginWith t xs)
 
   specify "toSet (union a b) = Set.union (toSet a) (toSet b)" $
     property $ \(TSet' a) (TSet' b) ->
@@ -67,8 +75,10 @@ spec = do
     property $ \(TSet' a) ->
       toSet (suffixes a) === setSuffixes (toSet a)
 
-enumerateViaFoldr :: T.TSet c -> [[c]]
-enumerateViaFoldr = T.foldr (:) []
+  specify "fromAscList . sort = fromList" $
+    property $ \strs -> fromAscList (sort strs) == fromList (strs :: [[C]])
+  specify "fromSet . Set.fromList = fromList" $
+    property $ \strs -> fromSet (Set.fromList strs) == fromList (strs :: [[C]])
 
 setAppend :: (Ord c) => Set [c] -> Set [c] -> Set [c]
 setAppend ass bss = Set.unions

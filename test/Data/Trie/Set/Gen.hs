@@ -1,6 +1,7 @@
 module Data.Trie.Set.Gen(
   C(..),
   TSet'(..),
+  TSet''(..),
   genTSet,
   acceptStrs,
   validTSet
@@ -14,6 +15,7 @@ import           Data.Trie.Set.Internal
 import           Common
 
 newtype TSet' = TSet' (TSet C)
+newtype TSet'' = TSet'' (TSet B)
 
 instance Show TSet' where
   show (TSet' t) = show t
@@ -21,6 +23,13 @@ instance Show TSet' where
 instance Arbitrary TSet' where
   arbitrary = TSet' <$> genTSet 
   shrink (TSet' t) = TSet' <$> shrinkTSet t
+
+instance Show TSet'' where
+  show (TSet'' t) = show t
+
+instance Arbitrary TSet'' where
+  arbitrary = TSet'' <$> genTSet 
+  shrink (TSet'' t) = TSet'' <$> shrinkTSet t
 
 genTSet :: (Ord c, Arbitrary c) => Gen (TSet c)
 genTSet = strings <$> arbitrary

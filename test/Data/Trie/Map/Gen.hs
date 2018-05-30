@@ -1,6 +1,7 @@
 module Data.Trie.Map.Gen(
   C(..),
   TMap'(..),
+  TMap''(..),
   genTMap,
   validTMap
 ) where
@@ -22,6 +23,15 @@ instance Show TMap' where
 instance Arbitrary TMap' where
   arbitrary = TMap' <$> genTMap 
   shrink (TMap' t) = TMap' <$> shrinkTMap t
+
+newtype TMap'' = TMap'' (TMap B Int)
+
+instance Show TMap'' where
+  show (TMap'' t) = show t
+
+instance Arbitrary TMap'' where
+  arbitrary = TMap'' <$> genTMap 
+  shrink (TMap'' t) = TMap'' <$> shrinkTMap t
 
 genTMap :: (Ord c, Arbitrary c, Arbitrary a) => Gen (TMap c a)
 genTMap = fromList <$> arbitrary
