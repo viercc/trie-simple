@@ -46,6 +46,9 @@ randomStrs =
 main :: IO ()
 main = defaultMain [ benchTSet, benchSet, benchTMap, benchMap ]
 
+enumerateViaFoldr :: TSet.TSet c -> [[c]]
+enumerateViaFoldr = TSet.foldr (:) []
+
 benchTSet :: Benchmark
 benchTSet = bgroup "TSet" 
   [ bgroup "construction"
@@ -57,6 +60,11 @@ benchTSet = bgroup "TSet"
         [ bench "isEmpty" (nf TSet.null dict)
         , bench "stringCount" (nf TSet.count dict)
         , bench "enumerate10" (nf (take 10 . TSet.enumerate) dict)
+        , bench "enumerate10_foldr" (nf (take 10 . enumerateViaFoldr) dict)
+        , bench "enumerate100" (nf (take 100 . TSet.enumerate) dict)
+        , bench "enumerate100_foldr" (nf (take 100 . enumerateViaFoldr) dict)
+        , bench "enumerateAll" (nf TSet.enumerate dict)
+        , bench "enumerateAll_foldr" (nf enumerateViaFoldr dict)
         , env randomStrs $ \qs ->
             bench "match" (nf (\dict' -> map (`TSet.member` dict') qs) dict) ]
   , env (TSet.fromList <$> dictAmEn) $ \dictA ->

@@ -24,6 +24,8 @@ spec = do
     property $ \(TSet' t) -> Prelude.null (enumerate t) === T.null t
   specify "length . enumerate = count" $
     property $ \(TSet' t) -> length (enumerate t) === count t
+  specify "enumerateViaFoldr = enumerate" $
+    property $ \(TSet' t) -> enumerateViaFoldr t == enumerate t
 
   specify "member t = (`Set.member` toSet t)" $
     property $ \(TSet' t) ->
@@ -64,6 +66,9 @@ spec = do
   specify "toSet (suffixes a) = setSuffixes (toSet a)" $
     property $ \(TSet' a) ->
       toSet (suffixes a) === setSuffixes (toSet a)
+
+enumerateViaFoldr :: T.TSet c -> [[c]]
+enumerateViaFoldr = T.foldr (:) []
 
 setAppend :: (Ord c) => Set [c] -> Set [c] -> Set [c]
 setAppend ass bss = Set.unions

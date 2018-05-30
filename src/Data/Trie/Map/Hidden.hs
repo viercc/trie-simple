@@ -34,7 +34,7 @@ module Data.Trie.Map.Hidden(
   toParser, toParser_, toParser__,
 
   -- * Traversing with keys
-  traverseWithKey, mapWithKey, foldMapWithKey,
+  traverseWithKey, mapWithKey, foldMapWithKey, foldrWithKey,
 
   -- * Internals
   Node(..),
@@ -127,12 +127,10 @@ singleton cs a0 = foldr cons (just a0) cs
 
 -- * Single-item modification
 insertWith :: (Ord c) => (a -> a -> a) -> [c] -> a -> TMap c a -> TMap c a
-insertWith f cs a = revise f' cs
-  where
-    f' = maybe a (f a)
+insertWith f cs a = revise (maybe a (f a)) cs
 
 insert :: (Ord c) => [c] -> a -> TMap c a -> TMap c a
-insert = insertWith const
+insert cs a = revise (const a) cs
 
 deleteWith :: (Ord c) => (b -> a -> Maybe a) -> [c] -> b -> TMap c a -> TMap c a
 deleteWith f cs b = update (f b) cs
@@ -147,6 +145,7 @@ adjust f = go
     go (c:cs) (TMap (Node ma e)) =
       let e' = Map.adjust (go cs) c e
       in TMap (Node ma e')
+{-# INLINE adjust #-}
 
 revise :: (Ord c) => (Maybe a -> a) -> [c] -> TMap c a -> TMap c a
 revise f = go
@@ -156,9 +155,11 @@ revise f = go
       let tNew = singleton cs (f Nothing)
           e' = Map.insertWith (const (go cs)) c tNew e
       in TMap (Node ma e')
+{-# INLINE revise #-}
 
 update :: (Ord c) => (a -> Maybe a) -> [c] -> TMap c a -> TMap c a
 update f cs = fromMaybe empty . update_ f cs
+{-# INLINE update #-}
 
 update_ :: (Ord c) => (a -> Maybe a) -> [c] -> TMap c a -> Maybe (TMap c a)
 update_ f = go
@@ -173,9 +174,11 @@ update_ f = go
       in if isNothing ma && Map.null e'
            then Nothing
            else Just $ TMap (Node ma e')
+{-# INLINE update_ #-}
 
 alter :: (Ord c) => (Maybe a -> Maybe a) -> [c] -> TMap c a -> TMap c a
 alter f cs = fromMaybe empty . alter_ f cs
+{-# INLINE alter #-}
 
 alter_ :: (Ord c) => (Maybe a -> Maybe a) -> [c] -> TMap c a -> Maybe (TMap c a)
 alter_ f = go
@@ -193,6 +196,7 @@ alter_ f = go
 
     aux cs Nothing  = singleton cs <$> f Nothing
     aux cs (Just t) = go cs t
+{-# INLINE alter_ #-}
 
 -- * Combine
 union :: (Ord c) => TMap c a -> TMap c a -> TMap c a
@@ -213,7 +217,8 @@ unionWith f = go
 intersection :: (Ord c) => TMap c a -> TMap c b -> TMap c a
 intersection = intersectionWith (\a _ -> Just a)
 
-intersectionWith :: (Ord c) => (a -> b -> Maybe r) -> TMap c a -> TMap c b -> TMap c r
+intersectionWith :: (Ord c) =>
+  (a -> b -> Maybe r) -> TMap c a -> TMap c b -> TMap c r
 intersectionWith f x y = fromMaybe empty $ go x y
   where
     go (TMap (Node ma ex)) (TMap (Node mb ey)) =
@@ -230,7 +235,8 @@ intersectionWith f x y = fromMaybe empty $ go x y
 difference :: (Ord c) => TMap c a -> TMap c b -> TMap c a
 difference = differenceWith (\_ _ -> Nothing)
 
-differenceWith :: (Ord c) => (a -> b -> Maybe a) -> TMap c a -> TMap c b -> TMap c a
+differenceWith :: (Ord c) =>
+  (a -> b -> Maybe a) -> TMap c a -> TMap c b -> TMap c a
 differenceWith f x y = fromMaybe empty $ go x y
   where
     go (TMap (Node ma ex)) (TMap (Node mb ey)) =
@@ -316,11 +322,7 @@ instance (Ord c, Semigroup a) => Monoid (TMap c a) where
 -- * Conversion
 
 toList :: TMap c a -> [([c], a)]
-toList = foldTMap toList'
-  where
-    toList' (Node ma e) =
-      [ ([], a) | a <- F.toList ma ] ++
-      [ (c:cs, a) | (c,pairs') <- Map.toAscList e, (cs,a) <- pairs' ]
+toList = foldrWithKey (\k a r -> (k,a) : r) []
 
 fromList :: Ord c => [([c], a)] -> TMap c a
 fromList = List.foldl' (flip (uncurry insert)) empty
@@ -417,14 +419,31 @@ traverseWithKey f = go []
 -- | Same semantics to following defintion, but have
 --   more efficient implementation.
 --
--- > traverseWithKey f = fmap fromAscList .
+-- > traverseWithKey f = fromAscList .
 -- >                     map (\(cs,a) -> (cs,  f cs a)) .
 -- >                     toAscList
 mapWithKey :: ([c] -> a -> b) -> TMap c a -> TMap c b
 mapWithKey f = runIdentity . traverseWithKey (\k a -> Identity (f k a))
 
+-- | Same semantics to following defintion, but have
+--   more efficient implementation.
+--
+-- > foldMapWithKey f = foldMap (uncurry f) . toAscList
 foldMapWithKey :: (Monoid r) => ([c] -> a -> r) -> TMap c a -> r
 foldMapWithKey f = getConst . traverseWithKey (\k a -> Const (f k a))
+
+-- | Same semantics to following defintion, but have
+--   more efficient implementation.
+--
+-- > foldrWithKey f z = foldr (uncurry f) z . toAscList
+foldrWithKey :: ([c] -> a -> r -> r) -> r -> TMap c a -> r
+foldrWithKey f z (TMap (Node ma e)) =
+  case ma of
+    Nothing -> r
+    Just a  -> f [] a r
+  where
+    r = Map.foldrWithKey (\c subTrie s ->
+          foldrWithKey (f . (c:)) s subTrie) z e
 
 -- * Other operations
 

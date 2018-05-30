@@ -6,6 +6,7 @@ module Data.Trie.Set.Hidden(
   member, notMember,
   beginWith,
   null, count, enumerate,
+  foldr, foldMap, foldl',
   -- * Construction
   empty, epsilon,
   string, strings,
@@ -27,14 +28,14 @@ module Data.Trie.Set.Hidden(
 )
 where
 
-import Prelude hiding (null)
+import Prelude hiding (foldMap, foldr, null)
 
 import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap
 
 import           Data.Semigroup
-import           Data.Foldable (asum)
-import qualified Data.List     as List (foldl')
+import qualified Data.Foldable as F
+import qualified Data.List     as List (foldr, foldl')
 import           Data.Maybe    (fromMaybe)
 import           Data.Map.Lazy (Map)
 import qualified Data.Map.Lazy as Map
@@ -43,8 +44,6 @@ import qualified Data.Set      as Set
 import           Control.Arrow ((&&&))
 
 import Control.DeepSeq
-
-import Util (groupStrs)
 
 data Node c r = Node !Bool !(Map c r)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
@@ -109,12 +108,31 @@ count = foldTSet count'
     count' (Node a e) =
       (if a then 1 else 0) + sum e
 
+
 enumerate :: TSet c -> [[c]]
-enumerate = foldTSet enumerate'
+enumerate = foldr (:) []
+
+{-
+from this post by u/foBrowsing:
+  https://www.reddit.com/r/haskell/comments/8krv31/how_to_traverse_a_trie/dzaktkn/
+-}
+foldr :: ([c] -> r -> r) -> r -> TSet c -> r
+foldr f z (TSet (Node a e))
+  | a         = f [] r
+  | otherwise = r
   where
-    enumerate' (Node a e) =
-      [ []   | a ] ++ 
-      [ c:cs | (c,css) <- Map.toAscList e, cs <- css ]
+    r = Map.foldrWithKey (\x tr xs -> foldr (f . (:) x) xs tr) z e
+
+foldMap :: (Monoid r) => ([c] -> r) -> TSet c -> r
+foldMap f (TSet (Node a e))
+  | a         = f [] `mappend` r
+  | otherwise = r
+  where
+    r = Map.foldMapWithKey (\c subTrie ->
+          foldMap (f . (c :)) subTrie) e
+
+foldl' :: (r -> [c] -> r) -> r -> TSet c -> r
+foldl' f z = List.foldl' f z . enumerate
 
 -- * Construction
 empty :: TSet c
@@ -124,7 +142,7 @@ epsilon :: TSet c
 epsilon = TSet (Node True Map.empty)
 
 string :: [c] -> TSet c
-string = foldr cons epsilon
+string = List.foldr cons epsilon
   where
     cons c t = TSet (Node False (Map.singleton c t))
 
@@ -194,7 +212,7 @@ prefixes t | null t    = empty
 suffixes :: (Ord c) => TSet c -> TSet c
 suffixes = paraTSet suffixes'
   where
-    suffixes' nx = union (TSet (fst <$> nx)) (foldMap snd nx)
+    suffixes' nx = union (TSet (fst <$> nx)) (F.foldMap snd nx)
 
 infixes :: (Ord c) => TSet c -> TSet c
 infixes = suffixes . prefixes
@@ -214,6 +232,15 @@ fromAscList xs =
   let (a,es) = groupStrs xs
       e' = Map.fromDistinctAscList $ map (fmap fromAscList) es
   in TSet (Node a e')
+
+groupStrs :: (Eq c) => [[c]] -> (Bool, [(c,[[c]])])
+groupStrs = List.foldr pushStr (False, [])
+  where
+    pushStr [] (_, gs) = (True, gs)
+    pushStr (c:cs) (hasNull, gs) =
+      case gs of
+        (d, dss):rest | c == d -> (hasNull, (d, cs:dss):rest)
+        _                      -> (hasNull, (c, [cs]):gs)
 
 toSet :: TSet c -> Set [c]
 toSet = Set.fromDistinctAscList . enumerate
@@ -236,7 +263,7 @@ toParser char eot = foldTSet enumerateA'
   where
     enumerateA' (Node a e) =
       (if a then [] <$ eot else Ap.empty) <|>
-      asum [ (:) <$> char c <*> as | (c, as) <- Map.toAscList e ]
+      F.asum [ (:) <$> char c <*> as | (c, as) <- Map.toAscList e ]
 
 -- | Construct a \"parser\" which recognizes member strings
 --   of a TSet.
@@ -252,7 +279,7 @@ toParser_ char eot = foldTSet enumerateA'
   where
     enumerateA' (Node a e) =
       (if a then () <$ eot else Ap.empty) <|>
-      asum [ char c *> as | (c, as) <- Map.toAscList e ]
+      F.asum [ char c *> as | (c, as) <- Map.toAscList e ]
 
 ----------------------
 
