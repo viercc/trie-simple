@@ -33,7 +33,7 @@ module Data.Trie.Map(
   toParser, toParser_, toParser__,
 
   -- * Traversing with keys
-  traverseWithKey, mapWithKey, foldMapWithKey,
+  traverseWithKey, mapWithKey, foldMapWithKey, foldrWithKey,
 )
 where
 

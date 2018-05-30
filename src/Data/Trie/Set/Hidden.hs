@@ -6,7 +6,7 @@ module Data.Trie.Set.Hidden(
   member, notMember,
   beginWith,
   null, count, enumerate,
-  foldr,
+  foldr, foldMap, foldl',
   -- * Construction
   empty, epsilon,
   string, strings,
@@ -28,7 +28,7 @@ module Data.Trie.Set.Hidden(
 )
 where
 
-import Prelude hiding (foldr, null)
+import Prelude hiding (foldMap, foldr, null)
 
 import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap
@@ -44,8 +44,6 @@ import qualified Data.Set      as Set
 import           Control.Arrow ((&&&))
 
 import Control.DeepSeq
-
-import Util (groupStrs)
 
 data Node c r = Node !Bool !(Map c r)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
@@ -112,13 +110,7 @@ count = foldTSet count'
 
 
 enumerate :: TSet c -> [[c]]
---enumerate = foldr (:) []
-enumerate = foldTSet step
-  where
-    step (Node a e) =
-      [ [] | a ] ++
-      [ x:xs | (x,xss) <- Map.toAscList e
-             , xs <- xss ]
+enumerate = foldr (:) []
 
 {-
 from this post by u/foBrowsing:
@@ -130,6 +122,17 @@ foldr f z (TSet (Node a e))
   | otherwise = r
   where
     r = Map.foldrWithKey (\x tr xs -> foldr (f . (:) x) xs tr) z e
+
+foldMap :: (Monoid r) => ([c] -> r) -> TSet c -> r
+foldMap f (TSet (Node a e))
+  | a         = f [] `mappend` r
+  | otherwise = r
+  where
+    r = Map.foldMapWithKey (\c subTrie ->
+          foldMap (f . (c :)) subTrie) e
+
+foldl' :: (r -> [c] -> r) -> r -> TSet c -> r
+foldl' f z = List.foldl' f z . enumerate
 
 -- * Construction
 empty :: TSet c
@@ -229,6 +232,15 @@ fromAscList xs =
   let (a,es) = groupStrs xs
       e' = Map.fromDistinctAscList $ map (fmap fromAscList) es
   in TSet (Node a e')
+
+groupStrs :: (Eq c) => [[c]] -> (Bool, [(c,[[c]])])
+groupStrs = List.foldr pushStr (False, [])
+  where
+    pushStr [] (_, gs) = (True, gs)
+    pushStr (c:cs) (hasNull, gs) =
+      case gs of
+        (d, dss):rest | c == d -> (hasNull, (d, cs:dss):rest)
+        _                      -> (hasNull, (c, [cs]):gs)
 
 toSet :: TSet c -> Set [c]
 toSet = Set.fromDistinctAscList . enumerate
