@@ -1,10 +1,11 @@
 name:                trie-simple
-version:             0.3.0.1
+version:             0.4
 synopsis:            Simple Map-based Trie
 description:
   Trie data structure `TMap` to hold mapping from list of characters to
   something, i.e. isomorphic to `Map [c] v`.
-  It is more efficient to query compared to `Map`. Also, it allows extra
+  
+  It is more efficient to query compared to `Map`. Also, it supports extra
   operation like prefix matching.
   This package also contains `TSet`, which is isomorphic to `Set` of lists of
   characters.
@@ -34,8 +35,7 @@ library
   build-depends:       base         >= 4.9     && < 4.12,
                        containers   >= 0.5.7.1 && < 0.6,
                        deepseq      >= 1.4.2.0 && < 1.5,
-                       mtl          >= 2.2.1   && < 2.3,
-                       semigroups   >= 0.18.4  && < 0.19
+                       mtl          >= 2.2.1   && < 2.3
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-dodgy-exports
 
@@ -68,5 +68,5 @@ benchmark trie-benchmark
                        vector,
                        mwc-random,
                        trie-simple
-  ghc-options:         -Wall -threaded -rtsopts -with-rtsopts=-N
+  ghc-options:         -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010

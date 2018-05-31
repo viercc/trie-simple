@@ -1,5 +1,5 @@
 module Data.Trie.Map(
-  -- * Types
+  -- * Type
   TMap(),
   -- * Queries
   match,

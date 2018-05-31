@@ -32,7 +32,7 @@ instance Arbitrary TSet'' where
   shrink (TSet'' t) = TSet'' <$> shrinkTSet t
 
 genTSet :: (Ord c, Arbitrary c) => Gen (TSet c)
-genTSet = strings <$> arbitrary
+genTSet = fromList <$> arbitrary
 
 shrinkTSet :: (Ord c, Arbitrary c) => TSet c -> [TSet c]
 shrinkTSet (TSet (Node a e)) = filter validTSet $

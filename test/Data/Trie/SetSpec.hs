@@ -18,10 +18,10 @@ spec = do
     enumerate (empty :: TSet C) `shouldSatisfy` Prelude.null
   specify "enumerate epsilon = [[]]" $
     enumerate (epsilon :: TSet C) `shouldBe` [[]]
-  specify "enumerate . string = (:[])" $
-    property $ \str -> enumerate (string (str :: [C])) === [str]
-  specify "enumerate . strings = Set.toAscList . Set.fromList" $
-    property $ \strs -> (enumerate . strings) (strs :: [[C]]) == (Set.toAscList . Set.fromList) strs
+  specify "enumerate . singleton = (:[])" $
+    property $ \str -> enumerate (singleton (str :: [C])) === [str]
+  specify "enumerate . fromList = Set.toAscList . Set.fromList" $
+    property $ \strs -> (enumerate . fromList) (strs :: [[C]]) == (Set.toAscList . Set.fromList) strs
   specify "null . enumerate = null" $
     property $ \(TSet' t) -> Prelude.null (enumerate t) === T.null t
   specify "length . enumerate = count" $

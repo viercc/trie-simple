@@ -71,6 +71,9 @@ data Node c a r = Node !(Maybe a) !(Map c r)
 instance (NFData c, NFData a, NFData r) => NFData (Node c a r) where
   rnf (Node a e) = rnf a `seq` rnf e
 
+-- | Mapping from `[c]` to `a` implemented as a trie.
+--   This type serves almost same purpose with `Map [c] a`,
+--   but can be looked up more efficiently.
 newtype TMap c a = TMap { getNode :: Node c a (TMap c a) }
   deriving (Eq, Ord)
 
@@ -81,6 +84,12 @@ instance (NFData c, NFData a) => NFData (TMap c a) where
   rnf (TMap node) = rnf node
 
 -- * Queries
+
+-- | Perform matching against a @TMap@.
+--
+--   @match xs tmap@ returns two values. First value is the result of
+--   'lookup'. Second value is another @TMap@, which holds mapping between
+--   all pair of @ys@ and @b@, such that @tmap@ maps @(xs ++ ys)@ to @b@.
 match :: (Ord c) => [c] -> TMap c a -> (Maybe a, TMap c a)
 match []     t@(TMap (Node ma _)) = (ma, t)
 match (c:cs)   (TMap (Node _  e)) =
@@ -88,6 +97,8 @@ match (c:cs)   (TMap (Node _  e)) =
     Nothing -> (Nothing, empty)
     Just t' -> match cs t'
 
+-- | @lookup xs tmap@ returns @Just a@ if @tmap@ contains mapping
+--   from @xs@ to @a@, and returns @Nothing@ if not.
 lookup :: (Ord c) => [c] -> TMap c a -> Maybe a
 lookup cs = fst . match cs
 
@@ -95,14 +106,17 @@ member, notMember :: (Ord c) => [c] -> TMap c a -> Bool
 member cs = isJust . lookup cs
 notMember cs = isNothing . lookup cs
 
+-- | Tests if given map is empty.
 null :: TMap c a -> Bool
 null (TMap (Node ma e)) = isNothing ma && Map.null e
 {- We ensure all @TMap@ values exposed to users have no
    redundant node. -}
 
+-- | Returns number of elements.
 count :: TMap c a -> Int
 count = F.length
 
+-- | Returns list of key strings, in ascending order.
 keys :: TMap c a -> [[c]]
 keys = foldTMap keys'
   where
@@ -110,34 +124,56 @@ keys = foldTMap keys'
       [ [] | isJust ma ] ++
       [ c:cs' | (c,css') <- Map.toList e, cs' <- css' ]
 
+-- | Returns list of values, in ascending order by its key.
 elems :: TMap c a -> [a]
 elems = F.toList
 
 -- * Construction
+
+-- | Empty @TMap@.
 empty :: TMap c a
 empty = TMap (Node Nothing Map.empty)
 
+-- | @TMap@ which contains only one mapping from the empty string to @a@.
 just :: a -> TMap c a
 just a = TMap (Node (Just a) Map.empty)
 
+-- | @singleton xs a@ is a @TMap@ which contains only one mapping
+--   from @xs@ to @a@.
 singleton :: [c] -> a -> TMap c a
 singleton cs a0 = foldr cons (just a0) cs
   where
     cons c t = TMap (Node Nothing (Map.singleton c t))
 
 -- * Single-item modification
-insertWith :: (Ord c) => (a -> a -> a) -> [c] -> a -> TMap c a -> TMap c a
-insertWith f cs a = revise (maybe a (f a)) cs
 
+-- | Inserts an key and value pair.
+--
+--   Already existing value will be overwritten, i.e.
+--   > insert = insertWith (const a) cs
 insert :: (Ord c) => [c] -> a -> TMap c a -> TMap c a
 insert cs a = revise (const a) cs
 
-deleteWith :: (Ord c) => (b -> a -> Maybe a) -> [c] -> b -> TMap c a -> TMap c a
-deleteWith f cs b = update (f b) cs
-
+-- | Deletes an entry with given key.
 delete :: (Ord c) => [c] -> TMap c a -> TMap c a
 delete = update (const Nothing)
 
+-- | @insertWith op xs a tmap@ inserts an key (@xs@) and value (@a@) pair
+--   to the @tmap@. If @tmap@ already has an entry with key equals to
+--   @xs@, its value @b@ is replaced with @op a b@.
+insertWith :: (Ord c) => (a -> a -> a) -> [c] -> a -> TMap c a -> TMap c a
+insertWith f cs a = revise (maybe a (f a)) cs
+
+-- | Deletes an entry with given key, conditionally.
+--
+--   @deleteWith f xs b@ looks up an entry with key @xs@, and if such entry
+--   is found, evaluate @f b a@ with its value @a@. If it returned @Nothing@,
+--   the entry is deleted. Otherwise, if it returned @Just a'@, the value of
+--   the entry is replaced with @a'@.
+deleteWith :: (Ord c) => (b -> a -> Maybe a) -> [c] -> b -> TMap c a -> TMap c a
+deleteWith f cs b = update (f b) cs
+
+-- | Apply a function to the entry with given key.
 adjust :: (Ord c) => (a -> a) -> [c] -> TMap c a -> TMap c a
 adjust f = go
   where
@@ -147,6 +183,8 @@ adjust f = go
       in TMap (Node ma e')
 {-# INLINE adjust #-}
 
+-- | Apply a function @f@ to the entry with given key. If there is no such
+--   entry, insert an entry with value @f Nothing@. 
 revise :: (Ord c) => (Maybe a -> a) -> [c] -> TMap c a -> TMap c a
 revise f = go
   where
@@ -157,6 +195,8 @@ revise f = go
       in TMap (Node ma e')
 {-# INLINE revise #-}
 
+-- | Apply a function @f@ to the entry with given key. If @f@ returns
+--   @Nothing@, that entry is deleted.
 update :: (Ord c) => (a -> Maybe a) -> [c] -> TMap c a -> TMap c a
 update f cs = fromMaybe empty . update_ f cs
 {-# INLINE update #-}
@@ -176,6 +216,11 @@ update_ f = go
            else Just $ TMap (Node ma e')
 {-# INLINE update_ #-}
 
+-- | Apply a function @f@ to the entry with given key. This function 'alter'
+--   is the most generic version of @adjust@, @revise@, @update@.
+--   You can insert new element by returning @Just a@ from @f Nothing@.
+--   And you can delete existing element by returning @Nothing@ from
+--   @f (Just a)@.
 alter :: (Ord c) => (Maybe a -> Maybe a) -> [c] -> TMap c a -> TMap c a
 alter f cs = fromMaybe empty . alter_ f cs
 {-# INLINE alter #-}

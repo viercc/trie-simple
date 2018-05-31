@@ -9,7 +9,7 @@ module Data.Trie.Set.Hidden(
   foldr, foldMap, foldl',
   -- * Construction
   empty, epsilon,
-  string, strings,
+  singleton,
   insert, delete,
   -- * Combine
   union, intersection, difference,
@@ -102,13 +102,15 @@ beginWith (TSet (Node _ e)) (c:cs) =
 null :: TSet c -> Bool
 null (TSet (Node a e)) = not a && Map.null e
 
+-- | Returns number of elements. @count@ takes O(number of nodes)
+--   unlike 'Set.size' which is O(1).
 count :: TSet c -> Int
 count = foldTSet count'
   where
     count' (Node a e) =
       (if a then 1 else 0) + sum e
 
-
+-- | List of all elements.
 enumerate :: TSet c -> [[c]]
 enumerate = foldr (:) []
 
@@ -138,22 +140,20 @@ foldl' f z = List.foldl' f z . enumerate
 empty :: TSet c
 empty = TSet (Node False Map.empty)
 
+-- | @epsilon = singleton []@
 epsilon :: TSet c
 epsilon = TSet (Node True Map.empty)
 
-string :: [c] -> TSet c
-string = List.foldr cons epsilon
+singleton :: [c] -> TSet c
+singleton = List.foldr cons epsilon
   where
     cons c t = TSet (Node False (Map.singleton c t))
-
-strings :: (Ord c) => [[c]] -> TSet c
-strings = List.foldl' (flip insert) empty
 
 insert :: (Ord c) => [c] -> TSet c -> TSet c
 insert [] (TSet (Node _ e)) = TSet (Node True e)
 insert (c:cs) (TSet (Node a e)) =
   let e' = Map.alter u c e
-      u = Just . maybe (string cs) (insert cs)
+      u = Just . maybe (singleton cs) (insert cs)
   in TSet (Node a e')
 
 delete :: (Ord c) => [c] -> TSet c -> TSet c
@@ -223,11 +223,11 @@ toList = enumerate
 toAscList = enumerate
 
 fromList :: (Ord c) => [[c]] -> TSet c
-fromList = strings
+fromList = List.foldl' (flip insert) empty
 
 fromAscList :: (Eq c) => [[c]] -> TSet c
 fromAscList [] = empty
-fromAscList [cs] = string cs
+fromAscList [cs] = singleton cs
 fromAscList xs =
   let (a,es) = groupStrs xs
       e' = Map.fromDistinctAscList $ map (fmap fromAscList) es
