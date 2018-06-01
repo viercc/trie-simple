@@ -18,6 +18,9 @@ module Data.Trie.Map(
   adjust, revise, update, alter,
 
   -- * Combine
+  --
+  -- These functions behave in the same way as corresponding
+  -- functions from "Data.Map".
   union, unionWith,
   intersection, intersectionWith,
   difference, differenceWith,

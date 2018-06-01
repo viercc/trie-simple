@@ -56,8 +56,8 @@ import           Control.Monad
 
 import qualified Data.Foldable          as F
 import qualified Data.List              as List (foldl')
-import           Data.Map.Lazy          (Map)
-import qualified Data.Map.Lazy          as Map
+import           Data.Map.Strict        (Map)
+import qualified Data.Map.Strict        as Map
 import           Data.Maybe             (fromMaybe, isJust, isNothing)
 
 import           Data.Trie.Set.Internal (TSet (..))
@@ -71,8 +71,8 @@ data Node c a r = Node !(Maybe a) !(Map c r)
 instance (NFData c, NFData a, NFData r) => NFData (Node c a r) where
   rnf (Node a e) = rnf a `seq` rnf e
 
--- | Mapping from `[c]` to `a` implemented as a trie.
---   This type serves almost same purpose with `Map [c] a`,
+-- | Mapping from @[c]@ to @a@ implemented as a trie.
+--   This type serves almost same purpose with @Map [c] a@,
 --   but can be looked up more efficiently.
 newtype TMap c a = TMap { getNode :: Node c a (TMap c a) }
   deriving (Eq, Ord)
@@ -109,10 +109,13 @@ notMember cs = isNothing . lookup cs
 -- | Tests if given map is empty.
 null :: TMap c a -> Bool
 null (TMap (Node ma e)) = isNothing ma && Map.null e
-{- We ensure all @TMap@ values exposed to users have no
+{- Ensure all @TMap@ values exposed to users have no
    redundant node. -}
 
--- | Returns number of elements.
+-- | Returns number of entries.
+--
+--   Note that this operation takes O(number of nodes),
+--   unlike O(1) of 'Map.size'.
 count :: TMap c a -> Int
 count = F.length
 
@@ -134,11 +137,11 @@ elems = F.toList
 empty :: TMap c a
 empty = TMap (Node Nothing Map.empty)
 
--- | @TMap@ which contains only one mapping from the empty string to @a@.
+-- | @TMap@ which contains only one entry from the empty string to @a@.
 just :: a -> TMap c a
 just a = TMap (Node (Just a) Map.empty)
 
--- | @singleton xs a@ is a @TMap@ which contains only one mapping
+-- | @singleton xs a@ is a @TMap@ which contains only one entry
 --   from @xs@ to @a@.
 singleton :: [c] -> a -> TMap c a
 singleton cs a0 = foldr cons (just a0) cs
@@ -147,20 +150,24 @@ singleton cs a0 = foldr cons (just a0) cs
 
 -- * Single-item modification
 
--- | Inserts an key and value pair.
+-- | Inserts an entry of key and value pair.
 --
 --   Already existing value will be overwritten, i.e.
---   > insert = insertWith (const a) cs
+--   > insert = insertWith (const a)
 insert :: (Ord c) => [c] -> a -> TMap c a -> TMap c a
 insert cs a = revise (const a) cs
 
 -- | Deletes an entry with given key.
+--
+--   > delete = update (const Nothing)
 delete :: (Ord c) => [c] -> TMap c a -> TMap c a
 delete = update (const Nothing)
 
 -- | @insertWith op xs a tmap@ inserts an key (@xs@) and value (@a@) pair
 --   to the @tmap@. If @tmap@ already has an entry with key equals to
 --   @xs@, its value @b@ is replaced with @op a b@.
+--
+--   > insertWith op cs a = revise (maybe a (op a)) cs
 insertWith :: (Ord c) => (a -> a -> a) -> [c] -> a -> TMap c a -> TMap c a
 insertWith f cs a = revise (maybe a (f a)) cs
 
@@ -170,6 +177,8 @@ insertWith f cs a = revise (maybe a (f a)) cs
 --   is found, evaluate @f b a@ with its value @a@. If it returned @Nothing@,
 --   the entry is deleted. Otherwise, if it returned @Just a'@, the value of
 --   the entry is replaced with @a'@.
+--
+--   > deleteWith f cs b = update (f b) cs
 deleteWith :: (Ord c) => (b -> a -> Maybe a) -> [c] -> b -> TMap c a -> TMap c a
 deleteWith f cs b = update (f b) cs
 
@@ -184,7 +193,7 @@ adjust f = go
 {-# INLINE adjust #-}
 
 -- | Apply a function @f@ to the entry with given key. If there is no such
---   entry, insert an entry with value @f Nothing@. 
+--   entry, insert an entry with value @f Nothing@.
 revise :: (Ord c) => (Maybe a -> a) -> [c] -> TMap c a -> TMap c a
 revise f = go
   where
@@ -216,11 +225,12 @@ update_ f = go
            else Just $ TMap (Node ma e')
 {-# INLINE update_ #-}
 
--- | Apply a function @f@ to the entry with given key. This function 'alter'
---   is the most generic version of @adjust@, @revise@, @update@.
---   You can insert new element by returning @Just a@ from @f Nothing@.
---   And you can delete existing element by returning @Nothing@ from
---   @f (Just a)@.
+-- | Apply a function @f@ to the entry with given key. This function @alter@
+--   is the most generic version of 'adjust', 'revise', 'update'.
+-- 
+--   * You can insert new entry by returning @Just a@ from @f Nothing@.
+--   * You can delete existing entry by returning @Nothing@ from
+--     @f (Just a)@.
 alter :: (Ord c) => (Maybe a -> Maybe a) -> [c] -> TMap c a -> TMap c a
 alter f cs = fromMaybe empty . alter_ f cs
 {-# INLINE alter #-}

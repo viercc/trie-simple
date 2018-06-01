@@ -34,13 +34,13 @@ import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap
 
 import           Data.Semigroup
-import qualified Data.Foldable as F
-import qualified Data.List     as List (foldr, foldl')
-import           Data.Maybe    (fromMaybe)
-import           Data.Map.Lazy (Map)
-import qualified Data.Map.Lazy as Map
-import           Data.Set      (Set)
-import qualified Data.Set      as Set
+import qualified Data.Foldable   as F
+import qualified Data.List       as List (foldr, foldl')
+import           Data.Maybe      (fromMaybe)
+import           Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import           Data.Set        (Set)
+import qualified Data.Set        as Set
 import           Control.Arrow ((&&&))
 
 import Control.DeepSeq
