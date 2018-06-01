@@ -16,6 +16,8 @@ Advantages of using this package over `Map` or `Set` are:
   * Can be more memory-efficient (but not always; needs
     benchmark anyway).
 
+[Not uploaded to Hackage yet. Haddock link is here](https://viercc.github.io/haddock/trie-simple/)
+
 ## Benchmarks
 
 Benchmarks compared against plain `Map` and `Set`.
