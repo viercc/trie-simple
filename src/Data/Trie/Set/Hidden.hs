@@ -157,10 +157,15 @@ insert (c:cs) (TSet (Node a e)) =
   in TSet (Node a e')
 
 delete :: (Ord c) => [c] -> TSet c -> TSet c
-delete [] (TSet (Node _ e)) = TSet (Node False e)
-delete (c:cs) (TSet (Node a e)) =
-  let e' = Map.adjust (delete cs) c e
-  in TSet (Node a e')
+delete cs t = fromMaybe empty $ delete_ cs t
+
+delete_ :: (Ord c) => [c] -> TSet c -> Maybe (TSet c)
+delete_ [] (TSet (Node _ e)) =
+  if Map.null e then Nothing else Just (TSet (Node False e))         
+delete_ (c:cs) (TSet (Node a e)) =
+  let e' = Map.update (delete_ cs) c e
+      t' = TSet (Node a e')
+  in if null t' then Nothing else Just t'
 
 -- * Combine
 union :: (Ord c) => TSet c -> TSet c -> TSet c
