@@ -28,9 +28,9 @@ spec = do
     property $ \(TSet' t) -> length (enumerate t) === count t
 
   specify "toSet (insert xs a) = Set.insert xs (toSet a)" $
-    property $ \xs (TSet' t) -> toSet (T.insert xs t) == Set.insert xs (toSet t)
+    property $ \xs (TSet' t) -> toSet (T.insert_foldr xs t) == Set.insert xs (toSet t)
   specify "toSet (delete xs a) = Set.delete xs (toSet a)" $
-    property $ \xs (TSet' t) -> toSet (T.delete xs t) == Set.delete xs (toSet t)
+    property $ \xs (TSet' t) -> toSet (T.delete_foldr xs t) == Set.delete xs (toSet t)
   
   specify "member t = (`Set.member` toSet t)" $
     property $ \(TSet'' t) ->

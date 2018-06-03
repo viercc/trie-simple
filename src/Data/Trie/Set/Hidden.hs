@@ -10,7 +10,7 @@ module Data.Trie.Set.Hidden(
   -- * Construction
   empty, epsilon,
   singleton,
-  insert, delete,
+  insert, insert_foldr, delete, delete_foldr,
   -- * Combine
   union, intersection, difference,
   append,
@@ -152,15 +152,46 @@ singleton = List.foldr cons epsilon
 insert :: (Ord c) => [c] -> TSet c -> TSet c
 insert [] (TSet (Node _ e)) = TSet (Node True e)
 insert (c:cs) (TSet (Node a e)) =
-  let e' = Map.alter u c e
-      u = Just . maybe (singleton cs) (insert cs)
+  let e' = Map.insertWith (const (insert cs)) c (singleton cs) e
   in TSet (Node a e')
+{-# INLINE insert #-}
+
+insert_foldr :: (Ord c, Foldable f) => f c -> TSet c -> TSet c
+insert_foldr = F.foldr f b
+  where
+    b (TSet (Node _ e)) = TSet (Node True e)
+    f x xs (TSet (Node a e)) =
+      let e' = Map.insertWith (const xs) x (xs empty) e
+      in TSet (Node a e')
+{-# INLINE insert_foldr #-}
 
 delete :: (Ord c) => [c] -> TSet c -> TSet c
-delete [] (TSet (Node _ e)) = TSet (Node False e)
-delete (c:cs) (TSet (Node a e)) =
-  let e' = Map.adjust (delete cs) c e
-  in TSet (Node a e')
+delete cs t = fromMaybe empty $ delete_ cs t
+{-# INLINE delete #-}
+
+delete_ :: (Ord c) => [c] -> TSet c -> Maybe (TSet c)
+delete_ [] (TSet (Node _ e)) =
+  if Map.null e then Nothing else Just (TSet (Node False e))
+delete_ (c:cs) (TSet (Node a e)) =
+  let e' = Map.update (delete_ cs) c e
+      t' = TSet (Node a e')
+  in if null t' then Nothing else Just t'
+{-# INLINE delete_ #-}
+
+delete_foldr :: (Ord c, Foldable f) => f c -> TSet c -> TSet c
+delete_foldr cs t = fromMaybe empty $ delete_foldr_ cs t
+{-# INLINE delete_foldr #-}
+
+delete_foldr_ :: (Ord c, Foldable f) => f c -> TSet c -> Maybe (TSet c)
+delete_foldr_ = F.foldr f b
+  where
+    b (TSet (Node _ e)) =
+      if Map.null e then Nothing else Just (TSet (Node False e))     
+    f x xs (TSet (Node a e)) =
+      let e' = Map.update xs x e
+          t' = TSet (Node a e')
+      in if null t' then Nothing else Just t'
+{-# INLINE delete_foldr_ #-}
 
 -- * Combine
 union :: (Ord c) => TSet c -> TSet c -> TSet c

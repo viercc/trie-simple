@@ -31,7 +31,7 @@ module Data.Trie.Set(
   -- * Construction
   empty, epsilon,
   singleton,
-  insert, delete,
+  insert, delete, insert_foldr, delete_foldr,
   -- * Combine
   union, intersection, difference,
   append,
