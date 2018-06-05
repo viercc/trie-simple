@@ -46,6 +46,17 @@ randomStrs =
 main :: IO ()
 main = defaultMain [ benchTSet, benchSet, benchTMap, benchMap ]
 
+insert3, delete3, insert_foldr3, delete_foldr3
+  :: TSet.TSet Char -> TSet.TSet Char
+insert3 = TSet.insert (replicate 200 'e')
+{-# NOINLINE insert3 #-}
+delete3 = TSet.delete (replicate 200 'e')
+{-# NOINLINE delete3 #-}
+insert_foldr3 = TSet.insert_foldr (replicate 200 'e')
+{-# NOINLINE insert_foldr3 #-}
+delete_foldr3 = TSet.delete_foldr (replicate 200 'e')
+{-# NOINLINE delete_foldr3 #-}
+
 benchTSet :: Benchmark
 benchTSet = bgroup "TSet" 
   [ bgroup "construction"
@@ -65,16 +76,16 @@ benchTSet = bgroup "TSet"
       bgroup "single-item"
         [ bench "insert1" (whnf (TSet.insert "wwwwwwwwwwwwwwww") dict)
         , bench "insert2" (whnf (TSet.insert "cheese") dict)
-        , bench "insert3" (whnf (TSet.insert (replicate 200 'e')) dict)
+        , bench "insert3" (whnf insert3 dict)
         , bench "delete1" (whnf (TSet.delete "wwwwwwwwwwwwwwww") dict)
         , bench "delete2" (whnf (TSet.delete "cheese") dict)
-        , bench "delete3" (whnf (TSet.delete (replicate 200 'e')) dict)
+        , bench "delete3" (whnf delete3 dict)
         , bench "insert_foldr1" (whnf (TSet.insert_foldr "wwwwwwwwwwwwwwww") dict)
         , bench "insert_foldr2" (whnf (TSet.insert_foldr "cheese") dict)
-        , bench "insert_foldr3" (whnf (TSet.insert_foldr (replicate 200 'e')) dict)
+        , bench "insert_foldr3" (whnf insert_foldr3 dict)
         , bench "delete_foldr1" (whnf (TSet.delete_foldr "wwwwwwwwwwwwwwww") dict)
         , bench "delete_foldr2" (whnf (TSet.delete_foldr "cheese") dict)
-        , bench "delete_foldr3" (whnf (TSet.delete_foldr (replicate 200 'e')) dict)
+        , bench "delete_foldr3" (whnf delete_foldr3 dict)
         ]
   , env (TSet.fromList <$> dictAmEn) $ \dictA ->
     env (TSet.fromList <$> dictBrEn) $ \dictB ->

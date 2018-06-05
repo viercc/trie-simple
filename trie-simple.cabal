@@ -69,4 +69,5 @@ benchmark trie-benchmark
                        mwc-random,
                        trie-simple
   ghc-options:         -O2 -Wall -threaded -rtsopts -with-rtsopts=-N
+                       -ddump-simpl -dsuppress-all
   default-language:    Haskell2010
