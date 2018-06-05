@@ -44,6 +44,7 @@ import qualified Data.Set        as Set
 import           Control.Arrow ((&&&))
 
 import Control.DeepSeq
+import GHC.Exts(oneShot)
 
 data Node c r = Node !Bool !(Map c r)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
@@ -160,13 +161,13 @@ insert_foldr :: (Ord c, Foldable f) => f c -> TSet c -> TSet c
 insert_foldr = F.foldr f b
   where
     b (TSet (Node _ e)) = TSet (Node True e)
-    f x xs (TSet (Node a e)) =
+    f x xs = oneShot (\(TSet (Node a e)) ->
       let e' = Map.insertWith (const xs) x (xs empty) e
-      in TSet (Node a e')
+      in TSet (Node a e'))
 {-# INLINE insert_foldr #-}
 
 delete :: (Ord c) => [c] -> TSet c -> TSet c
-delete cs t = fromMaybe empty $ delete_ cs t
+delete cs = fromMaybe empty . delete_ cs
 {-# INLINE delete #-}
 
 delete_ :: (Ord c) => [c] -> TSet c -> Maybe (TSet c)
@@ -179,7 +180,7 @@ delete_ (c:cs) (TSet (Node a e)) =
 {-# INLINE delete_ #-}
 
 delete_foldr :: (Ord c, Foldable f) => f c -> TSet c -> TSet c
-delete_foldr cs t = fromMaybe empty $ delete_foldr_ cs t
+delete_foldr cs = fromMaybe empty . delete_foldr_ cs
 {-# INLINE delete_foldr #-}
 
 delete_foldr_ :: (Ord c, Foldable f) => f c -> TSet c -> Maybe (TSet c)
@@ -187,10 +188,11 @@ delete_foldr_ = F.foldr f b
   where
     b (TSet (Node _ e)) =
       if Map.null e then Nothing else Just (TSet (Node False e))     
-    f x xs (TSet (Node a e)) =
+    f x xs = oneShot (\(TSet (Node a e)) ->
       let e' = Map.update xs x e
           t' = TSet (Node a e')
       in if null t' then Nothing else Just t'
+                     )
 {-# INLINE delete_foldr_ #-}
 
 -- * Combine
