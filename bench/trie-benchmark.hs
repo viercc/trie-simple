@@ -54,6 +54,8 @@ delete3 = TSet.delete (replicate 200 'e')
 {-# NOINLINE delete3 #-}
 insert_foldr3 = TSet.insert_foldr (replicate 200 'e')
 {-# NOINLINE insert_foldr3 #-}
+insert_foldr2_3 = TSet.insert_foldr2 (replicate 200 'e')
+{-# NOINLINE insert_foldr2_3 #-}
 delete_foldr3 = TSet.delete_foldr (replicate 200 'e')
 {-# NOINLINE delete_foldr3 #-}
 
@@ -83,6 +85,9 @@ benchTSet = bgroup "TSet"
         , bench "insert_foldr1" (whnf (TSet.insert_foldr "wwwwwwwwwwwwwwww") dict)
         , bench "insert_foldr2" (whnf (TSet.insert_foldr "cheese") dict)
         , bench "insert_foldr3" (whnf insert_foldr3 dict)
+        , bench "insert_foldr2_1" (whnf (TSet.insert_foldr2 "wwwwwwwwwwwwwwww") dict)
+        , bench "insert_foldr2_2" (whnf (TSet.insert_foldr2 "cheese") dict)
+        , bench "insert_foldr2_3" (whnf insert_foldr2_3 dict)
         , bench "delete_foldr1" (whnf (TSet.delete_foldr "wwwwwwwwwwwwwwww") dict)
         , bench "delete_foldr2" (whnf (TSet.delete_foldr "cheese") dict)
         , bench "delete_foldr3" (whnf delete_foldr3 dict)

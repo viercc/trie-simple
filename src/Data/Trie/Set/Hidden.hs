@@ -10,7 +10,7 @@ module Data.Trie.Set.Hidden(
   -- * Construction
   empty, epsilon,
   singleton,
-  insert, insert_foldr, delete, delete_foldr,
+  insert, insert_foldr, insert_foldr2, delete, delete_foldr,
   -- * Combine
   union, intersection, difference,
   append,
@@ -165,6 +165,18 @@ insert_foldr = F.foldr f b
       let e' = Map.insertWith (const xs) x (xs empty) e
       in TSet (Node a e'))
 {-# INLINE insert_foldr #-}
+
+insert_foldr2 :: (Ord c, Foldable f) => f c -> TSet c -> TSet c
+insert_foldr2 = fst . F.foldr f (b, epsilon)
+  where
+    b (TSet (Node _ e)) = TSet (Node True e)
+    f x (inserter', xs') =
+      let inserter = (\(TSet (Node a e)) ->
+            let e' = Map.insertWith (const inserter') x xs' e
+            in TSet (Node a e'))
+          xs = TSet (Node False (Map.singleton x xs'))
+      in (inserter, xs)
+{-# INLINE insert_foldr2 #-}
 
 delete :: (Ord c) => [c] -> TSet c -> TSet c
 delete cs = fromMaybe empty . delete_ cs
