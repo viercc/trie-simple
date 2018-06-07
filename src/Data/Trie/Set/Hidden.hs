@@ -146,26 +146,33 @@ epsilon = TSet (Node True Map.empty)
 
 singleton :: [c] -> TSet c
 singleton = List.foldr cons epsilon
+
+cons :: c -> TSet c -> TSet c
+cons c t = TSet (Node False (Map.singleton c t))
+
+insert :: (Ord c, Foldable f) => f c -> TSet c -> TSet c
+insert = fst . F.foldr f (b, epsilon)
   where
-    cons c t = TSet (Node False (Map.singleton c t))
+    b (TSet (Node _ e)) = TSet (Node True e)
+    f x (inserter', xs') =
+      let inserter (TSet (Node a e)) =
+            let e' = Map.insertWith (const inserter') x xs' e
+            in TSet (Node a e')
+          xs = cons x xs'
+      in (inserter, xs)
 
-insert :: (Ord c) => [c] -> TSet c -> TSet c
-insert [] (TSet (Node _ e)) = TSet (Node True e)
-insert (c:cs) (TSet (Node a e)) =
-  let e' = Map.alter u c e
-      u = Just . maybe (singleton cs) (insert cs)
-  in TSet (Node a e')
-
-delete :: (Ord c) => [c] -> TSet c -> TSet c
+delete :: (Ord c, Foldable f) => f c -> TSet c -> TSet c
 delete cs t = fromMaybe empty $ delete_ cs t
 
-delete_ :: (Ord c) => [c] -> TSet c -> Maybe (TSet c)
-delete_ [] (TSet (Node _ e)) =
-  if Map.null e then Nothing else Just (TSet (Node False e))         
-delete_ (c:cs) (TSet (Node a e)) =
-  let e' = Map.update (delete_ cs) c e
-      t' = TSet (Node a e')
-  in if null t' then Nothing else Just t'
+delete_ :: (Ord c, Foldable f) => f c -> TSet c -> Maybe (TSet c)
+delete_ = F.foldr f b
+  where
+    b (TSet (Node _ e)) =
+      if Map.null e then Nothing else Just (TSet (Node False e))
+    f x xs (TSet (Node a e)) =
+      let e' = Map.update xs x e
+          t' = TSet (Node a e')
+      in if null t' then Nothing else Just t'
 
 -- * Combine
 union :: (Ord c) => TSet c -> TSet c -> TSet c
