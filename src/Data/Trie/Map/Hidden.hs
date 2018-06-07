@@ -145,8 +145,9 @@ just a = TMap (Node (Just a) Map.empty)
 --   from @xs@ to @a@.
 singleton :: [c] -> a -> TMap c a
 singleton cs a0 = foldr cons (just a0) cs
-  where
-    cons c t = TMap (Node Nothing (Map.singleton c t))
+
+cons :: c -> TMap c a -> TMap c a
+cons c t = TMap (Node Nothing (Map.singleton c t))
 
 -- * Single-item modification
 
@@ -184,24 +185,25 @@ deleteWith f cs b = update (f b) cs
 
 -- | Apply a function to the entry with given key.
 adjust :: (Ord c) => (a -> a) -> [c] -> TMap c a -> TMap c a
-adjust f = go
+adjust f = F.foldr step base
   where
-    go []     (TMap (Node ma e)) = TMap (Node (f <$> ma) e)
-    go (c:cs) (TMap (Node ma e)) =
-      let e' = Map.adjust (go cs) c e
+    base (TMap (Node ma e)) = TMap (Node (f <$> ma) e)
+    step x xs (TMap (Node ma e)) =
+      let e' = Map.adjust xs x e
       in TMap (Node ma e')
 {-# INLINE adjust #-}
 
 -- | Apply a function @f@ to the entry with given key. If there is no such
 --   entry, insert an entry with value @f Nothing@.
 revise :: (Ord c) => (Maybe a -> a) -> [c] -> TMap c a -> TMap c a
-revise f = go
+revise f = fst . F.foldr step (base, just (f Nothing))
   where
-    go []     (TMap (Node ma e)) = TMap (Node (Just (f ma)) e)
-    go (c:cs) (TMap (Node ma e)) =
-      let tNew = singleton cs (f Nothing)
-          e' = Map.insertWith (const (go cs)) c tNew e
-      in TMap (Node ma e')
+    base (TMap (Node ma e)) = TMap (Node (Just (f ma)) e)
+    step x (inserter', xs') =
+      let inserter (TMap (Node ma e)) =
+            let e' = Map.insertWith (const inserter') x xs' e
+            in TMap (Node ma e')
+      in (inserter, cons x xs')
 {-# INLINE revise #-}
 
 -- | Apply a function @f@ to the entry with given key. If @f@ returns
@@ -211,15 +213,15 @@ update f cs = fromMaybe empty . update_ f cs
 {-# INLINE update #-}
 
 update_ :: (Ord c) => (a -> Maybe a) -> [c] -> TMap c a -> Maybe (TMap c a)
-update_ f = go
+update_ f = F.foldr step base
   where
-    go [] (TMap (Node ma e)) =
+    base (TMap (Node ma e)) =
       let ma' = ma >>= f
       in if isNothing ma' && Map.null e
            then Nothing
            else Just $ TMap (Node ma' e)
-    go (c:cs) (TMap (Node ma e)) =
-      let e' = Map.update (go cs) c e
+    step x xs (TMap (Node ma e)) =
+      let e' = Map.update xs x e
       in if isNothing ma && Map.null e'
            then Nothing
            else Just $ TMap (Node ma e')
@@ -231,26 +233,32 @@ update_ f = go
 --   * You can insert new entry by returning @Just a@ from @f Nothing@.
 --   * You can delete existing entry by returning @Nothing@ from
 --     @f (Just a)@.
+--
+--   This function always evaluates @f Nothing@ in addition to determine
+--   operation applied to given key.
+--   If you never use `alter` on a missing key, consider using 'update' instead.
 alter :: (Ord c) => (Maybe a -> Maybe a) -> [c] -> TMap c a -> TMap c a
-alter f cs = fromMaybe empty . alter_ f cs
+alter f =
+  case f Nothing of
+    Nothing -> update (f . Just)
+    Just f0 -> \cs -> fromMaybe empty . alter_ f f0 cs
 {-# INLINE alter #-}
 
-alter_ :: (Ord c) => (Maybe a -> Maybe a) -> [c] -> TMap c a -> Maybe (TMap c a)
-alter_ f = go
+alter_ :: (Ord c) => (Maybe a -> Maybe a) -> a -> [c] -> TMap c a -> Maybe (TMap c a)
+alter_ f f0 = fst . F.foldr step (base, just f0)
   where
-    go [] (TMap (Node ma e)) =
+    base (TMap (Node ma e)) =
       let ma' = f ma
       in if isNothing ma' && Map.null e
            then Nothing
            else Just $ TMap (Node ma' e)
-    go (c:cs) (TMap (Node ma e)) =
-      let e' = Map.alter (aux cs) c e
-      in if isNothing ma && Map.null e'
-           then Nothing
-           else Just $ TMap (Node ma e')
-
-    aux cs Nothing  = singleton cs <$> f Nothing
-    aux cs (Just t) = go cs t
+    step x (alterer', xs') =
+      let alterer (TMap (Node ma e)) =
+            let e' = Map.alter (maybe (Just xs') alterer') x e
+            in if isNothing ma && Map.null e'
+                 then Nothing
+                 else Just $ TMap (Node ma e')
+      in (alterer, cons x xs')
 {-# INLINE alter_ #-}
 
 -- * Combine
