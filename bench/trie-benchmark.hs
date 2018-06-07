@@ -86,6 +86,11 @@ benchTSet = bgroup "TSet"
         , bench "delete_foldr1" (whnf (TSet.delete_foldr "wwwwwwwwwwwwwwww") dict)
         , bench "delete_foldr2" (whnf (TSet.delete_foldr "cheese") dict)
         , bench "delete_foldr3" (whnf delete_foldr3 dict)
+        , env (return (insert3 dict)) $ \dict' ->
+            bgroup "tmp"
+              [ bench "delete3'" (whnf delete3 dict')
+              , bench "delete_foldr3'" (whnf delete_foldr3 dict')
+              ]
         ]
   , env (TSet.fromList <$> dictAmEn) $ \dictA ->
     env (TSet.fromList <$> dictBrEn) $ \dictB ->
