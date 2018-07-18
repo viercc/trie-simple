@@ -12,36 +12,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Map.Lazy (Map)
 import qualified Data.Map.Lazy as Map
-import qualified Data.Vector as V
-import Data.Word
 
-import qualified System.Random.MWC                as R
-import qualified System.Random.MWC.CondensedTable as R
-import qualified System.Random.MWC.Distributions  as R
-
-numRandomStr :: Int
-numRandomStr = 1000
-
-seed :: Word32 -> V.Vector Word32
-seed w = V.fromList [1573289798, 32614861, w]
-
-dictAmEn, dictBrEn, dictAmEnShuffled, randomStrs :: IO [String]
-dictAmEn = lines <$> readFile "/usr/share/dict/american-english"
-dictBrEn = lines <$> readFile "/usr/share/dict/british-english"
-dictAmEnShuffled =
-  do g <- R.initialize (seed 1)
-     ws <- V.fromList <$> dictAmEn
-     V.toList <$> R.uniformShuffle ws g
-randomStrs =
-  do g <- R.initialize (seed 3)
-     revReplicateM numRandomStr $ do
-       n <- R.genFromTable distN g
-       revReplicateM (n+1) (uniformAlphabet g)
-  where
-    distN = R.tableBinomial 12 0.33
-    alphabet = V.fromList ['a' .. 'z']
-    numAlphabet = V.length alphabet
-    uniformAlphabet g = (alphabet V.!) <$> R.uniformR (0, numAlphabet-1) g
+import Common
 
 main :: IO ()
 main = defaultMain [ benchTSet, benchSet, benchTMap, benchMap ]
@@ -52,7 +24,8 @@ benchTSet = bgroup "TSet"
       [ env dictAmEnShuffled $ \dict ->
           bench "fromList" $ whnf TSet.fromList dict
       , env (sort <$> dictAmEn) $ \sortedDict ->
-          bench "fromAscList" $ whnf TSet.fromAscList sortedDict ]
+          bench "fromAscList" $ whnf TSet.fromAscList sortedDict
+      , bench "fromList_stream" $ whnfIO (TSet.fromList <$> dictAmEn) ]
   , env (TSet.fromList <$> dictAmEn) $ \dict ->
       bgroup "query"
         [ bench "isEmpty" (nf TSet.null dict)
@@ -90,7 +63,8 @@ benchSet = bgroup "Set"
       [ env dictAmEnShuffled $ \dict ->
           bench "fromList" $ whnf Set.fromList dict
       , env (sort <$> dictAmEn) $ \sortedDict ->
-          bench "fromAscList" $ whnf Set.fromAscList sortedDict ]
+          bench "fromAscList" $ whnf Set.fromAscList sortedDict
+      , bench "fromList_stream" $ whnfIO (TSet.fromList <$> dictAmEn) ]
   , env (Set.fromList <$> dictAmEn) $ \dictSet ->
       bgroup "query"
         [ bench "isEmpty" (nf Set.null dictSet)
@@ -227,12 +201,3 @@ mapProd m1 m2 =
     [ prod1 s x m2 | (s,x) <- Map.toList m1 ]
   where
     prod1 s x m = Map.mapKeysMonotonic (s++) $ Map.map (x*) m
-
--------------------------------------------------------------------
--- Utility
-
-revReplicateM :: (Monad m) => Int -> m a -> m [a]
-revReplicateM n ma = loop n []
-  where
-    loop 0 acc = return acc
-    loop i acc = ma >>= \a -> loop (i-1) (a:acc)
