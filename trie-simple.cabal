@@ -29,13 +29,15 @@ library
   exposed-modules:     Data.Trie.Set,
                        Data.Trie.Set.Internal,
                        Data.Trie.Map,
-                       Data.Trie.Map.Internal
+                       Data.Trie.Map.Internal,
+                       Data.Trie.SetPathComp
   other-modules:       Data.Trie.Set.Hidden,
                        Data.Trie.Map.Hidden
   build-depends:       base         >= 4.9     && < 4.12,
                        containers   >= 0.5.7.1 && < 0.6,
                        deepseq      >= 1.4.2.0 && < 1.5,
-                       mtl          >= 2.2.1   && < 2.3
+                       mtl          >= 2.2.1   && < 2.3,
+                       vector
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-dodgy-exports
 
@@ -47,6 +49,8 @@ test-suite trie-simple-test
                   Data.Trie.Set.Gen,
                   Data.Trie.MapSpec,
                   Data.Trie.Map.Gen,
+                  Data.Trie.SetPathComp.Gen,
+                  Data.Trie.SetPathCompSpec,
                   Common
   build-depends: base >= 4.9 && < 4.12,
                  containers,

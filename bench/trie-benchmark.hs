@@ -3,6 +3,7 @@ module Main(main) where
 import Criterion.Main
 
 import qualified Data.Trie.Set as TSet
+import qualified Data.Trie.SetPathComp as TSetPC
 import Data.Trie.Map (TMap)
 import qualified Data.Trie.Map as TMap
 
@@ -16,7 +17,39 @@ import qualified Data.Map.Lazy as Map
 import Common
 
 main :: IO ()
-main = defaultMain [ benchTSet, benchSet, benchTMap, benchMap ]
+main = defaultMain [ benchTSet, benchTSetPC, benchSet, benchTMap, benchMap ]
+
+benchTSetPC :: Benchmark
+benchTSetPC = bgroup "TSetPC" 
+  [ bgroup "construction"
+      [ env dictAmEnShuffled $ \dict ->
+          bench "fromList" $ whnf TSetPC.fromList dict
+      , env (sort <$> dictAmEn) $ \sortedDict ->
+          bench "fromAscList" $ whnf TSetPC.fromAscList sortedDict
+      , bench "fromList_stream" $ whnfIO (TSetPC.fromList <$> dictAmEn) ]
+  , env (TSetPC.fromList <$> dictAmEn) $ \dict ->
+      bgroup "query"
+        [ bench "isEmpty" (nf TSetPC.null dict)
+        , bench "stringCount" (nf TSetPC.count dict)
+        , bench "enumerate10" (nf (take 10 . TSetPC.enumerate) dict)
+        , bench "enumerateAll" (nf TSetPC.enumerate dict)
+        , env randomStrs $ \qs ->
+            bench "match" (nf (\dict' -> map (`TSetPC.member` dict') qs) dict) ]
+  , env (TSetPC.fromList <$> dictAmEn) $ \dict ->
+      bgroup "single-item"
+        [ bench "insert1" (whnf (TSetPC.insert "wwwwwwwwwwwwwwww") dict)
+        , bench "insert2" (whnf (TSetPC.insert "cheese") dict)
+        , bench "delete1" (whnf (TSetPC.delete "wwwwwwwwwwwwwwww") dict)
+        , bench "delete2" (whnf (TSetPC.delete "cheese") dict)
+        ]
+  , env (TSetPC.fromList <$> dictAmEn) $ \dictA ->
+    env (TSetPC.fromList <$> dictBrEn) $ \dictB ->
+    env (TSetPC.fromList <$> randomStrs) $ \dictSmall ->
+      bgroup "combine"
+        [ bench "union" (whnf (uncurry TSetPC.union) (dictA, dictB))
+        , bench "intersection" (whnf (uncurry TSetPC.intersection) (dictA, dictB))
+        , bench "difference" (whnf (uncurry TSetPC.difference) (dictA, dictB)) ]
+  ]
 
 benchTSet :: Benchmark
 benchTSet = bgroup "TSet" 
