@@ -54,6 +54,7 @@ instance (NFData c, NFData r) => NFData (Node c r) where
 
 newtype TSet c = TSet { getNode :: Node c (TSet c) }
 
+-- TODO: improve Eq and Ord instance
 instance Eq c => Eq (TSet c) where
   (==) = (==) `on` enumerate
 
@@ -298,10 +299,9 @@ fromList = List.foldl' (flip insert) empty
 fromAscList :: (Eq c) => [[c]] -> TSet c
 fromAscList [] = empty
 fromAscList [cs] = singleton cs
-fromAscList xs =
-  let (a,es) = groupStrs xs
-      e' = Map.fromDistinctAscList $ map (fmap fromAscList) es
-  in TSet (Node V.empty a e')
+fromAscList xs = unfoldTSet step xs
+  where step ys = case groupStrs ys of
+          (a, es) -> (a, Map.fromDistinctAscList es)
 
 groupStrs :: (Eq c) => [[c]] -> (Bool, [(c,[[c]])])
 groupStrs = List.foldr pushStr (False, [])
@@ -311,6 +311,20 @@ groupStrs = List.foldr pushStr (False, [])
       case gs of
         (d, dss):rest | c == d -> (hasNull, (d, cs:dss):rest)
         _                      -> (hasNull, (c, [cs]):gs)
+
+unfoldTSet :: (s -> (Bool, Map c s)) -> s -> TSet c
+unfoldTSet step = go
+  where
+    go s = case step' s of
+      (ds, a, e) -> TSet $ Node (V.fromList ds) a (Map.map go e)
+
+    step' s = case step s of
+      (a, e) | not a && Map.size e == 1 ->
+                 let (c,s') = head $ Map.toList e
+                     (ds,a',e') = step' s'
+                 in (c:ds,a',e')
+             | otherwise                ->
+                 ([], a, e)
 
 toSet :: TSet c -> Set [c]
 toSet = Set.fromDistinctAscList . enumerate
