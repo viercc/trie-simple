@@ -1,0 +1,18 @@
+The "bench" directory under this directory contains a file
+"externallinks.txt.all". This file contains 615301 real URIs, which are
+external links from the Simple English Wikipedia articles. The purpose of
+this file is to provide some real-world benchmark data for this project.
+
+This work, "bench/externallinks.txt.all", is licensed under the Creative Commons
+Attribution-ShareAlike 3.0 Unported License.
+To view a copy of this license, visit http://creativecommons.org/licenses/by-sa/3.0/
+or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+This work is also a derived work by Koji Miyazato from one of data dumps[1] of
+Simple English Wikipedia, copyrighted by Wikimedia Foundation, Inc. I attribute
+their copyright.
+
+Copyright © 2018 Wikimedia Foundation, Inc.
+
+[1] https://dumps.wikimedia.org/simplewiki/20180901/
+

@@ -61,6 +61,7 @@ benchmark trie-benchmark
   type:                exitcode-stdio-1.0
   hs-source-dirs:      bench
   main-is:             trie-benchmark.hs
+  other-modules:       Common
   build-depends:       base >= 4.9 && < 4.12,
                        deepseq,
                        containers,

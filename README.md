@@ -25,3 +25,10 @@ Benchmarks compared against plain `Map` and `Set`.
 ![benchmark chart for TMap](doc/benchTMap.png)
 
 ![benchmark chart for TSet](doc/benchTSet.png)
+
+## About License
+
+[LICENSE](LICENSE) tells the licence of this project, EXCEPT
+one file for benchmark input data. See [ABOUT](ABOUT) for that
+file.
+
