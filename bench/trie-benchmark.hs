@@ -17,16 +17,24 @@ import qualified Data.Map.Lazy as Map
 import Common
 
 main :: IO ()
-main = defaultMain [ benchTSet, benchTSetPC, benchSet, benchTMap, benchMap ]
+main = defaultMain
+  [ benchTSetPC
+  , benchTSetPC_URI
+  , benchTSet
+  , benchTSet_URI
+  , benchSet
+  , benchSet_URI
+  , benchTMap
+  , benchMap
+  ]
 
 benchTSetPC :: Benchmark
 benchTSetPC = bgroup "TSetPC" 
   [ bgroup "construction"
       [ env dictAmEnShuffled $ \dict ->
           bench "fromList" $ whnf TSetPC.fromList dict
-      , env (sort <$> dictAmEn) $ \sortedDict ->
-          bench "fromAscList" $ whnf TSetPC.fromAscList sortedDict
-      , bench "fromList_stream" $ whnfIO (TSetPC.fromList <$> dictAmEn) ]
+      , env dictAmEn $ \sortedDict ->
+          bench "fromAscList" $ whnf TSetPC.fromAscList sortedDict ]
   , env (TSetPC.fromList <$> dictAmEn) $ \dict ->
       bgroup "query"
         [ bench "isEmpty" (nf TSetPC.null dict)
@@ -51,14 +59,43 @@ benchTSetPC = bgroup "TSetPC"
         , bench "difference" (whnf (uncurry TSetPC.difference) (dictA, dictB)) ]
   ]
 
+benchTSetPC_URI :: Benchmark
+benchTSetPC_URI = bgroup "TSetPC_URI" 
+  [ bgroup "construction"
+      [ env dictURI1 $ \dict ->
+          bench "fromList" $ whnf TSetPC.fromList dict
+      , env (sort <$> dictURI1) $ \sortedDict ->
+          bench "fromAscList" $ whnf TSetPC.fromAscList sortedDict ]
+  , env (TSetPC.fromList <$> dictURI1) $ \dict ->
+      bgroup "query"
+        [ bench "isEmpty" (nf TSetPC.null dict)
+        , bench "stringCount" (nf TSetPC.count dict)
+        , bench "enumerate10" (nf (take 10 . TSetPC.enumerate) dict)
+        , bench "enumerateAll" (nf TSetPC.enumerate dict)
+        , env randomStrs $ \qs ->
+            bench "match" (nf (\dict' -> map (`TSetPC.member` dict') qs) dict) ]
+  , env (TSetPC.fromList <$> dictURI1) $ \dict ->
+      bgroup "single-item"
+        [ bench "insert1" (whnf (TSetPC.insert "wwwwwwwwwwwwwwww") dict)
+        , bench "insert2" (whnf (TSetPC.insert "cheese") dict)
+        , bench "delete1" (whnf (TSetPC.delete "wwwwwwwwwwwwwwww") dict)
+        , bench "delete2" (whnf (TSetPC.delete "cheese") dict)
+        ]
+  , env (TSetPC.fromList <$> dictURI1) $ \dictA ->
+    env (TSetPC.fromList <$> dictURI2) $ \dictB ->
+      bgroup "combine"
+        [ bench "union" (whnf (uncurry TSetPC.union) (dictA, dictB))
+        , bench "intersection" (whnf (uncurry TSetPC.intersection) (dictA, dictB))
+        , bench "difference" (whnf (uncurry TSetPC.difference) (dictA, dictB)) ]
+  ]
+
 benchTSet :: Benchmark
 benchTSet = bgroup "TSet" 
   [ bgroup "construction"
       [ env dictAmEnShuffled $ \dict ->
           bench "fromList" $ whnf TSet.fromList dict
-      , env (sort <$> dictAmEn) $ \sortedDict ->
-          bench "fromAscList" $ whnf TSet.fromAscList sortedDict
-      , bench "fromList_stream" $ whnfIO (TSet.fromList <$> dictAmEn) ]
+      , env dictAmEn $ \sortedDict ->
+          bench "fromAscList" $ whnf TSet.fromAscList sortedDict ]
   , env (TSet.fromList <$> dictAmEn) $ \dict ->
       bgroup "query"
         [ bench "isEmpty" (nf TSet.null dict)
@@ -86,6 +123,40 @@ benchTSet = bgroup "TSet"
         , bench "suffixes" (whnf TSet.suffixes dictB) ]
   ]
 
+benchTSet_URI :: Benchmark
+benchTSet_URI = bgroup "TSet_URI" 
+  [ bgroup "construction"
+      [ env dictURI1 $ \dict ->
+          bench "fromList" $ whnf TSet.fromList dict
+      , env (sort <$> dictURI1) $ \sortedDict ->
+          bench "fromAscList" $ whnf TSet.fromAscList sortedDict ]
+  , env (TSet.fromList <$> dictURI1) $ \dict ->
+      bgroup "query"
+        [ bench "isEmpty" (nf TSet.null dict)
+        , bench "stringCount" (nf TSet.count dict)
+        , bench "enumerate10" (nf (take 10 . TSet.enumerate) dict)
+        , bench "enumerateAll" (nf TSet.enumerate dict)
+        , env randomStrs $ \qs ->
+            bench "match" (nf (\dict' -> map (`TSet.member` dict') qs) dict) ]
+  , env (TSet.fromList <$> dictURI1) $ \dict ->
+      bgroup "single-item"
+        [ bench "insert1" (whnf (TSet.insert "wwwwwwwwwwwwwwww") dict)
+        , bench "insert2" (whnf (TSet.insert "cheese") dict)
+        , bench "delete1" (whnf (TSet.delete "wwwwwwwwwwwwwwww") dict)
+        , bench "delete2" (whnf (TSet.delete "cheese") dict)
+        ]
+  , env (TSet.fromList <$> dictURI1) $ \dictA ->
+    env (TSet.fromList <$> dictURI2) $ \dictB ->
+    env (TSet.fromList <$> randomStrs) $ \dictSmall ->
+      bgroup "combine"
+        [ bench "union" (whnf (uncurry TSet.union) (dictA, dictB))
+        , bench "intersection" (whnf (uncurry TSet.intersection) (dictA, dictB))
+        , bench "difference" (whnf (uncurry TSet.difference) (dictA, dictB))
+        , bench "append" (whnf (uncurry TSet.append) (dictSmall, dictSmall))
+        , bench "prefixes" (whnf TSet.prefixes dictA)
+        , bench "suffixes" (whnf TSet.suffixes dictB) ]
+  ]
+  
 benchSet :: Benchmark
 benchSet = bgroup "Set" 
   [ bgroup "construction"
@@ -95,9 +166,8 @@ benchSet = bgroup "Set"
       -- in this benchmark.
       [ env dictAmEnShuffled $ \dict ->
           bench "fromList" $ whnf Set.fromList dict
-      , env (sort <$> dictAmEn) $ \sortedDict ->
-          bench "fromAscList" $ whnf Set.fromAscList sortedDict
-      , bench "fromList_stream" $ whnfIO (TSet.fromList <$> dictAmEn) ]
+      , env dictAmEn $ \sortedDict ->
+          bench "fromAscList" $ whnf Set.fromAscList sortedDict ]
   , env (Set.fromList <$> dictAmEn) $ \dictSet ->
       bgroup "query"
         [ bench "isEmpty" (nf Set.null dictSet)
@@ -115,6 +185,44 @@ benchSet = bgroup "Set"
         ]
   , env (Set.fromList <$> dictAmEn) $ \dictA ->
     env (Set.fromList <$> dictBrEn) $ \dictB ->
+    env (Set.fromList <$> randomStrs) $ \dictSmall ->
+      bgroup "combine"
+        [ bench "union" (whnf (uncurry Set.union) (dictA, dictB))
+        , bench "intersection" (whnf (uncurry Set.intersection) (dictA, dictB))
+        , bench "difference" (whnf (uncurry Set.difference) (dictA, dictB))
+        , bench "append" (whnf (uncurry setAppend) (dictSmall, dictSmall))
+        , bench "prefixes" (whnf setPrefixes dictA)
+        , bench "suffixes" (whnf setSuffixes dictB) ]
+  ]
+
+benchSet_URI :: Benchmark
+benchSet_URI = bgroup "Set_URI" 
+  [ bgroup "construction"
+      -- Set.fromList detects whether the input list is sorted
+      -- and switch the algorithm based on it.
+      -- Using shuffled dictionary avoids this optimization fires
+      -- in this benchmark.
+      [ env dictURI1 $ \dict ->
+          bench "fromList" $ whnf Set.fromList dict
+      , env (sort <$> dictURI1) $ \sortedDict ->
+          bench "fromAscList" $ whnf Set.fromAscList sortedDict ]
+  , env (Set.fromList <$> dictURI1) $ \dictSet ->
+      bgroup "query"
+        [ bench "isEmpty" (nf Set.null dictSet)
+        , bench "stringCount" (nf Set.size dictSet)
+        , bench "enumerate10" (nf (take 10 . Set.toList) dictSet)
+        , bench "enumerateAll" (nf Set.toList dictSet)
+        , env randomStrs $ \qs ->
+            bench "match" (nf (\dictSet' -> map (`Set.member` dictSet') qs) dictSet) ]
+  , env (Set.fromList <$> dictURI1) $ \dict ->
+      bgroup "single-item"
+        [ bench "insert1" (whnf (Set.insert "wwwwwwwwwwwwwwww") dict)
+        , bench "insert2" (whnf (Set.insert "cheese") dict)
+        , bench "delete1" (whnf (Set.delete "wwwwwwwwwwwwwwww") dict)
+        , bench "delete2" (whnf (Set.delete "cheese") dict)
+        ]
+  , env (Set.fromList <$> dictURI1) $ \dictA ->
+    env (Set.fromList <$> dictURI2) $ \dictB ->
     env (Set.fromList <$> randomStrs) $ \dictSmall ->
       bgroup "combine"
         [ bench "union" (whnf (uncurry Set.union) (dictA, dictB))

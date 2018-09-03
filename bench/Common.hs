@@ -1,6 +1,7 @@
 module Common(
   dictAmEn, dictBrEn,
-  dictAmEnShuffled, randomStrs
+  dictAmEnShuffled, randomStrs,
+  dictURI1, dictURI2
 ) where
 
 import qualified Data.Vector as V
@@ -19,10 +20,7 @@ seed w = V.fromList [1573289798, 32614861, w]
 dictAmEn, dictBrEn, dictAmEnShuffled, randomStrs :: IO [String]
 dictAmEn = lines <$> readFile "/usr/share/dict/american-english"
 dictBrEn = lines <$> readFile "/usr/share/dict/british-english"
-dictAmEnShuffled =
-  do g <- R.initialize (seed 1)
-     ws <- V.fromList <$> dictAmEn
-     V.toList <$> R.uniformShuffle ws g
+dictAmEnShuffled = lines <$> readFile "benchdata/american-english-shuf"
 randomStrs =
   do g <- R.initialize (seed 3)
      revReplicateM numRandomStr $ do
@@ -33,6 +31,10 @@ randomStrs =
     alphabet = V.fromList ['a' .. 'z']
     numAlphabet = V.length alphabet
     uniformAlphabet g = (alphabet V.!) <$> R.uniformR (0, numAlphabet-1) g
+
+dictURI1, dictURI2 :: IO [String]
+dictURI1 = lines <$> readFile "benchdata/externallinks.txt.1"
+dictURI2 = lines <$> readFile "benchdata/externallinks.txt.2"
 
 revReplicateM :: (Monad m) => Int -> m a -> m [a]
 revReplicateM n ma = loop n []
