@@ -16,15 +16,13 @@ Advantages of using this package over `Map` or `Set` are:
   * Can be more memory-efficient (but not always; needs
     benchmark anyway).
 
-[Not uploaded to Hackage yet. Haddock link is here](https://viercc.github.io/haddock/trie-simple/)
-
 ## Benchmarks
 
 Benchmarks compared against plain `Map` and `Set`.
 
-![benchmark chart for TMap](doc/benchTMap.png)
+![benchmark chart for TMap](https://raw.githubusercontent.com/viercc/trie-simple/master/doc/benchTMap.png)
 
-![benchmark chart for TSet](doc/benchTSet.png)
+![benchmark chart for TSet](https://raw.githubusercontent.com/viercc/trie-simple/master/doc/benchTSet.png)
 
 ## About License
 
@@ -32,3 +30,5 @@ Benchmarks compared against plain `Map` and `Set`.
 one file for benchmark input data. See [ABOUT](ABOUT) for that
 file.
 
+If you install `trie-simple` from Hackage, that input data is not
+included in the distributed files.

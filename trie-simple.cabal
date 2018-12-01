@@ -1,5 +1,5 @@
 name:                trie-simple
-version:             0.4.1
+version:             0.4.1.1
 synopsis:            Simple Map-based Trie
 description:
   Trie data structure `TMap` to hold mapping from list of characters to
@@ -16,7 +16,7 @@ maintainer:          viercc@gmail.com
 copyright:           Koji Miyazato
 category:            Data Structure
 build-type:          Simple
--- extra-source-files:
+extra-source-files:  README.md, CHANGELOG.md
 cabal-version:       >=1.10
 
 source-repository head
@@ -32,7 +32,7 @@ library
                        Data.Trie.Map.Internal
   other-modules:       Data.Trie.Set.Hidden,
                        Data.Trie.Map.Hidden
-  build-depends:       base         >= 4.9     && < 4.12,
+  build-depends:       base         >= 4.9     && < 4.13,
                        containers   >= 0.5.7.1 && < 0.6,
                        deepseq      >= 1.4.2.0 && < 1.5,
                        mtl          >= 2.2.1   && < 2.3
@@ -48,7 +48,7 @@ test-suite trie-simple-test
                   Data.Trie.MapSpec,
                   Data.Trie.Map.Gen,
                   Common
-  build-depends: base >= 4.9 && < 4.12,
+  build-depends: base,
                  containers,
                  vector,
                  QuickCheck,
@@ -62,7 +62,7 @@ benchmark trie-benchmark
   hs-source-dirs:      bench
   main-is:             trie-benchmark.hs
   other-modules:       Common
-  build-depends:       base >= 4.9 && < 4.12,
+  build-depends:       base,
                        deepseq,
                        containers,
                        criterion,

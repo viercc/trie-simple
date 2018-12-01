@@ -25,7 +25,7 @@ rm -f ../benchdata/bench.csv
 # Run benchmark
 stack bench --ba='--csv=benchdata/bench.csv'
 # Preprocess the output file
-sed -e 's/Name/Name\/Category\/Method/' ../benchdata/bench.csv | tr '/' ',' > ../benchdata/bench_preprocessed.csv
+sed -e 's/Name,Mean/Name\/Category\/Method,MeanTime/' ../benchdata/bench.csv | tr '/' ',' > ../benchdata/bench_preprocessed.csv
 # Draw charts using R
 R CMD BATCH analyze.R '../benchdata/analyze.Rout'
 mv -f *.png ../doc/
