@@ -32,7 +32,7 @@ library
                        Data.Trie.Map.Internal
   other-modules:       Data.Trie.Set.Hidden,
                        Data.Trie.Map.Hidden
-  build-depends:       base         >= 4.9     && < 4.13,
+  build-depends:       base         >= 4.9     && < 4.14,
                        containers   >= 0.5.7.1 && < 0.7,
                        deepseq      >= 1.4.2.0 && < 1.5,
                        mtl          >= 2.2.1   && < 2.3
