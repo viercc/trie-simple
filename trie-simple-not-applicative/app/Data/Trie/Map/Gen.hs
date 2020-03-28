@@ -3,7 +3,6 @@ module Data.Trie.Map.Gen(
 ) where
 
 import           Test.QuickCheck hiding (shrinkMapBy)
-import           Test.QuickCheck.Checkers
 
 import Data.Maybe (isJust)
 import qualified Data.Map.Lazy as Map
@@ -19,21 +18,12 @@ instance Show U where
   showsPrec _ U = showString "U"
   showList us = showString $ "U^" ++ show (length us)
 
-instance EqProp U where
-  (=-=) = eq
-
 instance Arbitrary U where
   arbitrary = return U
 
 instance (Ord c, Arbitrary c, Arbitrary a) => Arbitrary (TMap c a) where
   arbitrary = genTMap
   shrink    = shrinkTMap
-
-instance (EqProp c, EqProp a) => EqProp (TMap c a) where
-  x =-= y  = toList x =-= toList y
-
-instance EqProp C where
-  (=-=) = eq
 
 genTMap :: (Ord c, Arbitrary c, Arbitrary a) => Gen (TMap c a)
 genTMap = fromList <$> arbitrary

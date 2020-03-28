@@ -13,11 +13,11 @@ executable tmap-test-monad
   hs-source-dirs: app
   main-is:        TestTMap.hs
   other-modules:  Data.Trie.Map.Gen,
-                  Common
-  build-depends: base >= 4.9 && < 5,
+                  Common,
+                  Props
+  build-depends: base >= 4.12 && < 5,
                  containers,
                  QuickCheck,
-                 checkers,
                  trie-simple
   ghc-options: -Wall -O2 -threaded -rtsopts -with-rtsopts=-N
   default-language: Haskell2010

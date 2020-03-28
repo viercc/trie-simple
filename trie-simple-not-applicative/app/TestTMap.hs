@@ -1,11 +1,10 @@
+{-# LANGUAGE TypeApplications #-}
 module Main (main) where
 
 import           Control.Monad
 import           Control.Applicative(liftA2)
 
 import           Test.QuickCheck
-import           Test.QuickCheck.Checkers
-import           Test.QuickCheck.Classes
 
 import           Data.Trie.Map          as T
 import           Data.Trie.Map.Internal as T
@@ -16,10 +15,14 @@ import           Data.Maybe        (fromMaybe)
 
 import           Data.Semigroup
 
+import           Props
+
 main :: IO ()
 main = do
-  quickBatch (functor typeTag3)
-  quickBatch (applicative typeTag3)
+  quickCheck (propFunctor @(TMap U))
+  quickCheck (propApplicativeLeftU @(TMap U))
+  quickCheck (propApplicativeRightU @(TMap U))
+  quickCheck (propApplicativeAssoc @(TMap U))
   quickCheck monadAssoc
   putStrLn "Applicative fail:"
   putStrLn $ "(x,y,z) = " ++ show applicativeAssocCounterexample
@@ -27,9 +30,6 @@ main = do
   putStrLn $ "x <++> (y <++> z) = " ++ show (x <++> (y <++> z))
   putStrLn $ "(x <++> y) <++> z = " ++ show ((x <++> y) <++> z)
   putStrLn "    where <++> = liftA2 (++)"
-
-typeTag3 :: TMap U (Bool, Bool, Bool)
-typeTag3 = empty
 
 monadAssoc :: TMap U (TMap U (TMap U Int)) -> Property
 monadAssoc tttb = join (join tttb) === join (fmap join tttb)
