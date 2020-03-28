@@ -1,6 +1,6 @@
 module Main(main) where
 
-import Criterion.Main
+import Gauge.Main
 
 import qualified Data.Trie.Set as TSet
 import Data.Trie.Map (TMap)

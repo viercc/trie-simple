@@ -65,7 +65,7 @@ benchmark trie-benchmark
   build-depends:       base,
                        deepseq,
                        containers,
-                       criterion,
+                       gauge,
                        vector,
                        mwc-random,
                        trie-simple
