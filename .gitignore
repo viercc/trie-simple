@@ -1,18 +1,2 @@
-# cabal and stack
-.cabal-sandbox/
-cabal.sandbox.config
-.stack-work/
-
-# raw build files
-*.hi
-*.o
-
-# editor backup
-*~
-
-# hasktags file
-TAGS
-
 # generated files
 benchdata/
-

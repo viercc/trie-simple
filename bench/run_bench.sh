@@ -23,7 +23,7 @@ fi
 # Delete output file of previous run
 rm -f ../benchdata/bench.csv
 # Run benchmark
-stack bench --ba='--csv=benchdata/bench.csv'
+cabal run trie-benchmark -- -s --csv='tmp.csv'
 # Preprocess the output file
 sed -e 's/Name,Mean/Name\/Category\/Method,MeanTime/' ../benchdata/bench.csv | tr '/' ',' > ../benchdata/bench_preprocessed.csv
 # Draw charts using R
