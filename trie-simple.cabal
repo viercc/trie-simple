@@ -14,7 +14,7 @@ license-file:        LICENSE
 author:              Koji Miyazato
 maintainer:          viercc@gmail.com
 copyright:           Koji Miyazato
-category:            Data Structure
+category:            Data Structures
 build-type:          Simple
 extra-source-files:  README.md, CHANGELOG.md
 cabal-version:       2.0
