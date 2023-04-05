@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 module Data.Trie.Map.Hidden(
   -- * Types
   TMap(..),
@@ -69,6 +70,18 @@ import           Data.Functor.Classes
 import qualified GHC.Exts
 import           Text.Show (showListWith)
 
+import Data.Functor.WithIndex
+import Data.Foldable.WithIndex
+import Data.Traversable.WithIndex
+
+import Data.Hashable.Lifted
+import Data.Hashable
+import Witherable
+import Data.These (These(..))
+import Data.Zip (Zip(..))
+import Data.Align ( Align(..), Semialign(..) )
+import Data.Matchable
+
 data Node c a r = Node !(Maybe a) !(Map c r)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
 
@@ -110,15 +123,100 @@ instance (NFData c, NFData a) => NFData (TMap c a) where
   rnf (TMap node) = rnf node
 
 instance (Eq c) => Eq1 (TMap c) where
-  liftEq eq (TMap m1) (TMap m2) = liftEq2 eq (liftEq eq) m1 m2
+  liftEq = liftEq2 (==)
+
+instance Eq2 TMap where
+  liftEq2 eqC eqA = go
+    where
+      go (TMap (Node ma1 e1)) (TMap (Node ma2 e2)) =
+        liftEq eqA ma1 ma2 &&
+        liftEq2 eqC go e1 e2
 
 instance (Ord c) => Ord1 (TMap c) where
   liftCompare cmp (TMap m1) (TMap m2) = liftCompare2 cmp (liftCompare cmp) m1 m2
+
+instance Ord2 TMap where
+  liftCompare2 cmpC cmpA = go
+    where
+      go (TMap (Node ma1 e1)) (TMap (Node ma2 e2)) =
+        liftCompare cmpA ma1 ma2 <>
+        liftCompare2 cmpC go e1 e2
 
 instance (Ord c) => GHC.Exts.IsList (TMap c a) where
   type Item (TMap c a) = ([c],a)
   fromList = fromList
   toList = toList
+
+instance Hashable2 TMap where
+  liftHashWithSalt2 hashC hashA = hashT
+    where
+      hashMA = liftHashWithSalt hashA
+      hashEdges = liftHashWithSalt2 hashC hashT
+      hashT s (TMap (Node ma e)) = s `hashMA` ma `hashEdges` e
+
+instance Hashable c => Hashable1 (TMap c) where
+  liftHashWithSalt = liftHashWithSalt2 hashWithSalt
+
+instance (Hashable c, Hashable a) => Hashable (TMap c a) where
+  hashWithSalt = hashWithSalt2
+
+instance FunctorWithIndex [c] (TMap c) where
+  imap f (TMap (Node ma e)) = TMap $ Node (f [] <$> ma) (imap (\c t' -> imap (f . (c:)) t') e)
+
+instance FoldableWithIndex [c] (TMap c) where
+  ifoldMap = ifoldMapDefault
+
+instance TraversableWithIndex [c] (TMap c) where
+  itraverse f (TMap (Node ma e)) = fmap TMap $
+    Node <$> traverse (f []) ma <*> itraverse (\c t' -> itraverse (f . (c:)) t') e
+
+instance Ord c => Filterable (TMap c) where
+  mapMaybe f = go
+    where
+      go (TMap (Node ma edges)) =
+        TMap (Node (ma >>= f) (mapMaybe (nonEmptyTMap . go) edges))
+
+instance Ord c => Witherable (TMap c) where
+  wither f = go
+    where
+      go (TMap (Node ma edges)) = fmap TMap $
+        Node <$> wither f ma <*> wither (fmap nonEmptyTMap . go) edges
+
+instance Ord c => FilterableWithIndex [c] (TMap c) where
+  imapMaybe f (TMap (Node ma edges)) = TMap (Node mb edges')
+    where
+      mb = ma >>= f []
+      edges' = imapMaybe (\c t -> nonEmptyTMap $ imapMaybe (f . (c:)) t) edges
+
+instance Ord c => WitherableWithIndex [c] (TMap c) where
+  iwither f (TMap (Node ma edges)) = TMap <$> (Node <$> mb <*> edges')
+    where
+      mb = wither (f []) ma
+      edges' = iwither child edges
+      child c t = nonEmptyTMap <$> iwither (f . (c :)) t
+
+instance Ord c => Semialign (TMap c) where
+  align (TMap (Node ma e1)) (TMap (Node mb e2)) = TMap (Node mc e')
+    where
+      mc = align ma mb
+      e' = alignWith subtree e1 e2
+      subtree (This t1) = This <$> t1
+      subtree (That t2) = That <$> t2
+      subtree (These t1 t2) = align t1 t2
+
+instance (Ord c) => Align (TMap c) where
+  nil = empty
+
+instance (Ord c) => Zip (TMap c) where
+  zipWith op = intersectionWith (\a b -> Just (op a b))
+
+instance (Eq c) => Matchable (TMap c) where
+  zipMatchWith f = go
+    where
+      go (TMap (Node ma e1)) (TMap (Node mb e2)) = TMap <$> (Node <$> mc <*> e')
+        where
+          mc = zipMatchWith f ma mb
+          e' = zipMatchWith go e1 e2
 
 -- * Queries
 
@@ -550,3 +648,8 @@ foldrWithKey f z (TMap (Node ma e)) =
 foldTMap :: (Node c a r -> r) -> TMap c a -> r
 foldTMap f = go
   where go (TMap node) = f (fmap go node)
+
+nonEmptyTMap :: TMap c a -> Maybe (TMap c a)
+nonEmptyTMap t
+  | null t = Nothing
+  | otherwise = Just t
