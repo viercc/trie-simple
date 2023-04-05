@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE TypeFamilies #-}
 module Data.Trie.Set.Hidden(
   -- * Types
   TSet(..),
@@ -44,6 +45,9 @@ import qualified Data.Set        as Set
 import           Control.Arrow ((&&&))
 
 import Control.DeepSeq
+import Data.Functor.Classes
+import Text.Show (showListWith)
+import qualified GHC.Exts
 
 data Node c r = Node !Bool !(Map c r)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
@@ -54,12 +58,20 @@ instance (NFData c, NFData r) => NFData (Node c r) where
 newtype TSet c = TSet { getNode :: Node c (TSet c) }
   deriving (Eq, Ord)
 
+instance Show1 TSet where
+  liftShowsPrec _ showListC p t = showParen (p > 10) $
+    showString "fromList " . showListWith showListC (enumerate t)
+
 instance Show c => Show (TSet c) where
-  showsPrec p t = showParen (p > 10) $
-    showString "fromList " . showsPrec 11 (enumerate t)
+  showsPrec = showsPrec1
 
 instance (NFData c) => NFData (TSet c) where
   rnf (TSet node) = rnf node
+
+instance (Ord c) => GHC.Exts.IsList (TSet c) where
+  type Item (TSet c) = [c]
+  fromList = fromList
+  toList = toList
 
 {-
 

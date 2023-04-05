@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE TypeFamilies #-}
 module Data.Trie.Map.Hidden(
   -- * Types
   TMap(..),
@@ -64,9 +65,24 @@ import           Data.Trie.Set.Internal (TSet (..))
 import qualified Data.Trie.Set.Internal as TSet
 
 import           Control.DeepSeq
+import           Data.Functor.Classes
+import qualified GHC.Exts
+import           Text.Show (showListWith)
 
 data Node c a r = Node !(Maybe a) !(Map c r)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
+
+instance (Eq c, Eq a) => Eq1 (Node c a) where
+  liftEq = liftEq2 (==)
+
+instance (Ord c, Ord a) => Ord1 (Node c a) where
+  liftCompare = liftCompare2 compare
+
+instance Eq c => Eq2 (Node c) where
+  liftEq2 eqA eqR (Node a1 e1) (Node a2 e2) = liftEq eqA a1 a2 && liftEq eqR e1 e2
+
+instance Ord c => Ord2 (Node c) where
+  liftCompare2 cmpA cmpR (Node a1 e1) (Node a2 e2) = liftCompare cmpA a1 a2 <> liftCompare cmpR e1 e2
 
 instance (NFData c, NFData a, NFData r) => NFData (Node c a r) where
   rnf (Node a e) = rnf a `seq` rnf e
@@ -77,11 +93,32 @@ instance (NFData c, NFData a, NFData r) => NFData (Node c a r) where
 newtype TMap c a = TMap { getNode :: Node c a (TMap c a) }
   deriving (Eq, Ord)
 
+instance Show2 TMap where
+  liftShowsPrec2 _ showListC showspA _ p t = showParen (p > 10) $
+    showString "fromList " . showListWith (showPairWith showListC (showspA 0)) (toList t)
+
+showPairWith :: (a -> ShowS) -> (b -> ShowS) -> (a,b) -> ShowS
+showPairWith showsA showsB = liftShowsPrec2 (const showsA) (showListWith showsA) (const showsB) (showListWith showsB) 0
+
+instance Show c => Show1 (TMap c) where
+  liftShowsPrec = liftShowsPrec2 showsPrec showList
+
 instance (Show c, Show a) => Show (TMap c a) where
-  showsPrec p t = showParen (p > 10) $ showString "fromList " . showsPrec 11 (toList t)
+  showsPrec = showsPrec2
 
 instance (NFData c, NFData a) => NFData (TMap c a) where
   rnf (TMap node) = rnf node
+
+instance (Eq c) => Eq1 (TMap c) where
+  liftEq eq (TMap m1) (TMap m2) = liftEq2 eq (liftEq eq) m1 m2
+
+instance (Ord c) => Ord1 (TMap c) where
+  liftCompare cmp (TMap m1) (TMap m2) = liftCompare2 cmp (liftCompare cmp) m1 m2
+
+instance (Ord c) => GHC.Exts.IsList (TMap c a) where
+  type Item (TMap c a) = ([c],a)
+  fromList = fromList
+  toList = toList
 
 -- * Queries
 
