@@ -1,14 +1,13 @@
 name:                trie-simple
-version:             0.4.1.1
+version:             0.4.2
 synopsis:            Simple Map-based Trie
 description:
   A trie data structure @TMap c v@, to hold a mapping from list of characters (@[c]@) to
   something. In other words, a data structure isomorphic to @Map [c] v@.
   It is more efficient to query compared to @Map@. Also, it supports extra
-  operation like prefix matching.
+  operations like prefix matching.
   
-  This package contains @TSet@ too, which is isomorphic to @Set@ of lists of
-  characters.
+  This package contains @TSet c@ too, which is isomorphic to @Set [c]@.
 license:             BSD3
 license-file:        LICENSE
 author:              Koji Miyazato
