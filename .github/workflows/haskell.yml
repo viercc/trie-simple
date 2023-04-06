@@ -1,0 +1,76 @@
+name: Haskell CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ['9.0.2', '9.2.7', '9.4.4', '9.6.1']
+    name: Build on GHC ${{ matrix.ghc }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.ghcup
+            ~/.cabal
+            dist-newstyle
+          key: ${{ runner.os }}-${{ matrix.ghc }}-env
+      
+      - name: Setup Haskell
+        run: |
+          ghcup install ghc ${{ matrix.ghc }}
+          ghcup set ghc ${{ matrix.ghc }}
+          ghcup install cabal latest
+          ghcup set cabal latest
+      
+      - name: Install dependencies
+        run: |
+          cabal update
+          cabal build --only-dependencies --enable-tests --enable-benchmarks
+      - name: Build
+        run: cabal v2-build --enable-tests --enable-benchmarks all
+  
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        ghc: ['9.0.2', '9.2.7', '9.4.4', '9.6.1']
+    needs: build
+    name: Test on GHC ${{ matrix.ghc }}
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Cache
+        id: restore-cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.ghcup
+            ~/.cabal
+            dist-newstyle
+          key: ${{ runner.os }}-${{ matrix.ghc }}-env
+      
+      - name: 'Guard(cache was restored)'
+        if: ${{ !(steps.restore-cache.outputs.cache-hit) }}
+        run: exit 1
+      
+      - name: Setup Haskell
+        run: |
+          ghcup set ghc ${{ matrix.ghc }}
+          ghcup set cabal latest
+      
+      - name: Run tests
+        run: cabal v2-test
