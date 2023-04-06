@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE TypeFamilies #-}
 module Data.Trie.Set.Hidden(
   -- * Types
   TSet(..),
@@ -44,6 +45,11 @@ import qualified Data.Set        as Set
 import           Control.Arrow ((&&&))
 
 import Control.DeepSeq
+import Data.Functor.Classes
+import Text.Show (showListWith)
+import qualified GHC.Exts
+import Data.Hashable.Lifted
+import Data.Hashable
 
 data Node c r = Node !Bool !(Map c r)
   deriving (Show, Eq, Ord, Functor, Foldable, Traversable)
@@ -54,12 +60,38 @@ instance (NFData c, NFData r) => NFData (Node c r) where
 newtype TSet c = TSet { getNode :: Node c (TSet c) }
   deriving (Eq, Ord)
 
+instance Show1 TSet where
+  liftShowsPrec _ showListC p t = showParen (p > 10) $
+    showString "fromList " . showListWith showListC (enumerate t)
+
 instance Show c => Show (TSet c) where
-  showsPrec p t = showParen (p > 10) $
-    showString "fromList " . showsPrec 11 (enumerate t)
+  showsPrec = showsPrec1
 
 instance (NFData c) => NFData (TSet c) where
   rnf (TSet node) = rnf node
+
+instance (Ord c) => GHC.Exts.IsList (TSet c) where
+  type Item (TSet c) = [c]
+  fromList = fromList
+  toList = toList
+
+instance Eq1 TSet where
+  liftEq eq = go
+    where
+      go (TSet (Node a1 e1)) (TSet (Node a2 e2)) = a1 == a2 && liftEq2 eq go e1 e2
+
+instance Ord1 TSet where
+  liftCompare cmp = go
+    where
+      go (TSet (Node a1 e1)) (TSet (Node a2 e2)) = compare a1 a2 <> liftCompare2 cmp go e1 e2
+
+instance Hashable c => Hashable (TSet c) where
+  hashWithSalt = liftHashWithSalt hashWithSalt
+
+instance Hashable1 TSet where
+  liftHashWithSalt hashC = go
+    where
+      go s (TSet (Node a e)) = liftHashWithSalt2 hashC go (s `hashWithSalt` a) e
 
 {-
 
