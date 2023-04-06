@@ -15,7 +15,8 @@ maintainer:          viercc@gmail.com
 copyright:           Koji Miyazato
 category:            Data Structures
 build-type:          Simple
-extra-source-files:  README.md, CHANGELOG.md
+extra-source-files:  README.md
+extra-doc-files:     CHANGELOG.md
 cabal-version:       2.0
 
 source-repository head
