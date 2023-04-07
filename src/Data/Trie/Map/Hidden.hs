@@ -493,7 +493,7 @@ appendWith f x y =
 instance Functor (TMap c) where
   fmap f = go
     where
-      go (TMap (Node ma e)) = TMap (Node (fmap f ma) (fmap go e))
+      go (TMap (Node ma e)) = TMap (Node (fmap f ma) (Map.map go e))
 
 instance Foldable (TMap c) where
   foldMap f = go
@@ -647,7 +647,7 @@ foldrWithKey f z (TMap (Node ma e)) =
 
 foldTMap :: (Node c a r -> r) -> TMap c a -> r
 foldTMap f = go
-  where go (TMap node) = f (fmap go node)
+  where go (TMap (Node a e)) = f (Node a (Map.map go e))
 
 nonEmptyTMap :: TMap c a -> Maybe (TMap c a)
 nonEmptyTMap t

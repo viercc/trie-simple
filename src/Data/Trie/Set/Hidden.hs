@@ -329,8 +329,8 @@ toParser_ char eot = foldTSet enumerateA'
 
 foldTSet :: (Node c r -> r) -> TSet c -> r
 foldTSet f = go
-  where go (TSet node) = f (fmap go node)
+  where go (TSet (Node a e)) = f (Node a (Map.map go e))
 
 paraTSet :: (Node c (TSet c, r) -> r) -> TSet c -> r
 paraTSet f = go
-  where go (TSet node) = f (fmap (id &&& go) node)
+  where go (TSet (Node a e)) = f (Node a (Map.map (id &&& go) e))
