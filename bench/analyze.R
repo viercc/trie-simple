@@ -1,6 +1,6 @@
 library(ggplot2)
 
-srcfile <- '../benchdata/bench_preprocessed.csv'
+srcfile <- 'benchdata/bench_preprocessed.csv'
 
 data <- read.csv(srcfile)
 
