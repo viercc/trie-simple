@@ -46,5 +46,5 @@ module Data.Trie.Set(
 )
 where
 
-import Prelude hiding (foldr, foldMap, null)
+import Prelude hiding (Foldable(..))
 import Data.Trie.Set.Hidden
