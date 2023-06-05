@@ -29,12 +29,13 @@ module Data.Trie.Set.Hidden(
 )
 where
 
-import Prelude hiding (foldMap, foldr, null)
+import Prelude hiding (Foldable(..))
 
 import           Control.Applicative hiding (empty)
 import qualified Control.Applicative as Ap
 
 import           Data.Semigroup
+import           Data.Foldable   (Foldable)
 import qualified Data.Foldable   as F
 import qualified Data.List       as List (foldr, foldl')
 import           Data.Maybe      (fromMaybe)
@@ -140,7 +141,7 @@ count :: TSet c -> Int
 count = foldTSet count'
   where
     count' (Node a e) =
-      (if a then 1 else 0) + sum e
+      (if a then 1 else 0) + F.sum e
 
 -- | List of all elements.
 enumerate :: TSet c -> [[c]]
