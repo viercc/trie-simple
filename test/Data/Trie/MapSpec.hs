@@ -16,6 +16,11 @@ import           Data.Trie.Map.Gen
 import qualified Data.Trie.Set     as TSet
 import           Data.Trie.Set.Gen
 
+import           Data.Bits ((.|.))
+
+op :: Int -> Int -> Int
+op x y = 1 + 2 * x - 3 * y - (x .|. y)
+
 spec :: Spec
 spec = do
   specify "toList empty = []" $
@@ -27,9 +32,15 @@ spec = do
   specify "toAscList . fromList = Map.toAscList . Map.fromList" $
     property $ \strs -> toAscList (fromList strs :: TMap C Int) ==
                         (Map.toAscList . Map.fromList) strs
+  specify "toAscList . fromListWith op = Map.toAscList . Map.fromListWith op" $
+    property $ \strs -> toAscList (fromListWith op strs :: TMap C Int) ==
+                        (Map.toAscList . Map.fromListWith op) strs
   specify "fromAscList . sortBy (comparing fst) = fromList" $
     property $ \strs -> fromAscList (sortBy (comparing fst) strs) ==
                         (fromList strs :: TMap C Int)
+  specify "fromAscListWith op . sortBy (comparing fst) = fromListWith op" $
+    property $ \strs -> fromAscListWith op (sortBy (comparing fst) strs) ==
+                        (fromListWith op strs :: TMap C Int)
   specify "fromMap . Map.fromList = fromList" $
     property $ \strs -> fromMap (Map.fromList strs) ==
                         (fromList strs :: TMap C Int)
@@ -65,15 +76,15 @@ spec = do
   specify "toMap (delete k a) = Map.delete k (toMap a)" $
     property $ \k (TMap'' a) ->
       toMap (delete k a) == Map.delete k (toMap a)
-  specify "toMap (insertWith (+) k 1 a) = Map.insertWith (+) k 1 (toMap a)" $
-    property $ \k (TMap'' a) ->
-      toMap (insertWith (+) k 1 a) ==
-      Map.insertWith (+) k 1 (toMap a)
+  specify "toMap (insertWith op k v a) = Map.insertWith op k v (toMap a)" $
+    property $ \k v (TMap'' a) ->
+      toMap (insertWith op k v a) ==
+      Map.insertWith op k v (toMap a)
   let sub b a = if a < b then Nothing else Just (a - b)
-  specify "toMap (deleteWith sub k 1 a) = Map.update (sub 1) k (toMap a)" $
-    property $ \k (TMap'' a) ->
-      toMap (deleteWith sub k 1 a) ==
-      Map.update (sub 1) k (toMap a)
+  specify "toMap (deleteWith sub k v a) = Map.update (sub v) k (toMap a)" $
+    property $ \k v (TMap'' a) ->
+      toMap (deleteWith sub k v a) ==
+      Map.update (sub v) k (toMap a)
   specify "toMap (adjust (*2) k a) = Map.adjust (*2) k (toMap a)" $
     property $ \k (TMap'' a) ->
       toMap (adjust (*2) k a) == Map.adjust (*2) k (toMap a)

@@ -27,8 +27,8 @@ module Data.Trie.Map(
   appendWith,
 
   -- * Conversion
-  toList, fromList,
-  toAscList, fromAscList,
+  toList, fromList, fromListWith,
+  toAscList, fromAscList, fromAscListWith,
   toMap, fromMap,
   keysTSet, fromTSet,
 

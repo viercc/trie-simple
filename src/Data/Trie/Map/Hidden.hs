@@ -27,8 +27,8 @@ module Data.Trie.Map.Hidden(
   appendWith,
 
   -- * Conversion
-  toList, fromList,
-  toAscList, fromAscList,
+  toList, fromList, fromListWith,
+  toAscList, fromAscList, fromAscListWith,
   toMap, fromMap,
   keysTSet, fromTSet,
 
@@ -48,16 +48,15 @@ import           Prelude                hiding (lookup, null)
 
 import           Data.Functor.Const
 import           Data.Functor.Identity
-
 import           Data.Semigroup
 
 import           Control.Applicative    hiding (empty)
 import qualified Control.Applicative    as Ap (empty)
-
 import           Control.Monad
 
 import qualified Data.Foldable          as F
 import qualified Data.List              as List (foldl')
+import qualified Data.List.NonEmpty     as NE
 import           Data.Map.Strict        (Map)
 import qualified Data.Map.Strict        as Map
 import           Data.Maybe             (fromMaybe, isJust, isNothing)
@@ -161,14 +160,14 @@ instance (Hashable c, Hashable a) => Hashable (TMap c a) where
   hashWithSalt = hashWithSalt2
 
 instance FunctorWithIndex [c] (TMap c) where
-  imap f (TMap (Node ma e)) = TMap $ Node (f [] <$> ma) (imap (\c t' -> imap (f . (c:)) t') e)
+  imap f (TMap (Node ma e)) = TMap $ Node (f [] <$> ma) (Map.mapWithKey (\c t' -> imap (f . (c:)) t') e)
 
 instance FoldableWithIndex [c] (TMap c) where
   ifoldMap = ifoldMapDefault
 
 instance TraversableWithIndex [c] (TMap c) where
   itraverse f (TMap (Node ma e)) = fmap TMap $
-    Node <$> traverse (f []) ma <*> itraverse (\c t' -> itraverse (f . (c:)) t') e
+    Node <$> traverse (f []) ma <*> Map.traverseWithKey (\c t' -> itraverse (f . (c:)) t') e
 
 instance Ord c => Filterable (TMap c) where
   mapMaybe f = go
@@ -474,19 +473,19 @@ So it must be commutative semigroup to get a stable result.
 -}
 appendWith :: (Ord c, Semigroup z) => (x -> y -> z) ->
   TMap c x -> TMap c y -> TMap c z
-appendWith f x y =
-  if null y
-    then empty
-    else go x
-  where
-    go (TMap (Node Nothing e)) =
-      let e' = Map.map go e
-      in TMap (Node Nothing e')
-    go (TMap (Node (Just ax) e)) =
-      let TMap (Node maz e') = fmap (f ax) y
-          e'' = Map.map go e
-          e''' = Map.unionWith (unionWith (<>)) e' e''
-      in TMap (Node maz e''')
+appendWith f xs (TMap (Node my ey))
+  | Map.null ey = case my of
+      Nothing -> empty
+      Just y  -> fmap (`f` y) xs
+  | otherwise = go xs
+    where
+      go (TMap (Node Nothing ex)) = TMap (Node Nothing (Map.map go ex))
+      go (TMap (Node (Just x) ex)) =
+        let mz = f x <$> my
+            ex' = Map.map go ex
+            ey' = Map.map (fmap (f x)) ey
+            ez = Map.unionWith (unionWith (<>)) ey' ex'
+        in TMap (Node mz ez)
 
 -- * Instances
 
@@ -525,6 +524,9 @@ toList = foldrWithKey (\k a r -> (k,a) : r) []
 fromList :: Ord c => [([c], a)] -> TMap c a
 fromList = List.foldl' (flip (uncurry insert)) empty
 
+fromListWith :: Ord c => (a -> a -> a) -> [ ([c],a)] -> TMap c a
+fromListWith op = List.foldl' (flip (uncurry (insertWith op))) empty
+
 toAscList :: TMap c a -> [([c], a)]
 toAscList = toList
 
@@ -532,17 +534,31 @@ fromAscList :: Eq c => [([c], a)] -> TMap c a
 fromAscList [] = empty
 fromAscList [(cs, a)] = singleton cs a
 fromAscList pairs =
-  let (ma, gs) = group_ pairs
+  let (as, gs) = group_ pairs
+      ma = NE.last <$> NE.nonEmpty as
       e = Map.fromDistinctAscList $ map (fmap fromAscList) gs
   in TMap (Node ma e)
 
-group_ :: Eq c => [([c], a)] -> (Maybe a, [ (c, [ ([c], a) ]) ] )
-group_ = foldr step (Nothing, [])
+foldl1' :: (a -> a -> a) -> NE.NonEmpty a -> a
+foldl1' f (a NE.:| as) = F.foldl' f a as
+
+fromAscListWith :: Ord c => (a -> a -> a) -> [ ([c],a)] -> TMap c a
+fromAscListWith _ [] = empty
+fromAscListWith op pairs =
+  let (as, gs) = group_ pairs
+      ma = foldl1' (flip op) <$> NE.nonEmpty as
+      e = Map.fromDistinctAscList $ map (fmap (fromAscListWith op)) gs
+  in TMap (Node ma e)
+
+group_ :: Eq c => [([c], a)] -> ([a], [ (c, [ ([c], a) ]) ] )
+group_ = foldr step ([], [])
   where
-    step ([], a) (ma, gs) = (ma <|> Just a, gs)
-    step (c:cs, a) (ma, gs) = case gs of
-      (d,ps'):rest | c == d  -> (ma, (d, (cs,a):ps'):rest)
-      _            -> (ma, (c, [(cs,a)]):gs)
+    step ([], a) ~(as, gs) = (a : as, gs)
+    step (c:cs, a) ~(as, gs) = (as, prepend c cs a gs)
+    
+    prepend c cs a gs = case gs of
+      (d,ps'):rest | c == d  -> (d, (cs,a):ps'):rest
+      _                      -> (c, [(cs,a)]):gs
 
 toMap :: TMap c a -> Map [c] a
 toMap = Map.fromDistinctAscList . toAscList
