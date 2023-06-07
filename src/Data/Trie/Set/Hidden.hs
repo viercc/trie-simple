@@ -240,11 +240,13 @@ difference_ (TSet (Node ax ex)) (TSet (Node ay ey)) =
     ez = Map.differenceWith difference_ ex ey
 
 append :: (Ord c) => TSet c -> TSet c -> TSet c
-append _ y | null y = empty
-append (TSet (Node ax ex)) y = f (TSet (Node False ez))
+append x (TSet (Node ay ey))
+  | Map.null ey = if ay then x else empty
+  | otherwise   = go x
   where
-    ez = Map.map (`append` y) ex
-    f = if ax then union y else id
+    go (TSet (Node ax ex))
+      | ax        = TSet $ Node ay (Map.unionWith union ey (Map.map go ex))
+      | otherwise = TSet $ Node ax (Map.map go ex)
 
 -- * Other operations
 
