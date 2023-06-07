@@ -18,11 +18,13 @@ Advantages of using this package over `Map` or `Set` are:
 
 ## Benchmarks
 
-Benchmarks compared against plain `Map` and `Set`.
+Benchmarks compared against plain `Map` and `Set`. 
 
-![benchmark chart for TMap](https://raw.githubusercontent.com/viercc/trie-simple/master/doc/benchTMap.png)
+![benchmark chart for TMap](https://raw.githubusercontent.com/viercc/trie-simple/master/doc/ratio-map.png)
 
-![benchmark chart for TSet](https://raw.githubusercontent.com/viercc/trie-simple/master/doc/benchTSet.png)
+![benchmark chart for TSet](https://raw.githubusercontent.com/viercc/trie-simple/master/doc/ratio-set.png)
+
+Each of these benchmarks has two sets of point and errorbars, representing two datasets they are run against.
 
 ## About License
 
