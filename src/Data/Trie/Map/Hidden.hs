@@ -98,7 +98,7 @@ instance (NFData c, NFData a, NFData r) => NFData (Node c a r) where
   rnf (Node a e) = rnf a `seq` rnf e
 
 -- | Mapping from @[c]@ to @a@ implemented as a trie.
---   This type serves almost same purpose with @Map [c] a@,
+--   This type serves the almost same purpose of @Map [c] a@,
 --   but can be looked up more efficiently.
 newtype TMap c a = TMap { getNode :: Node c a (TMap c a) }
   deriving (Eq, Ord)
@@ -216,11 +216,17 @@ instance (Eq c) => Matchable (TMap c) where
 
 -- * Queries
 
--- | Perform matching against a @TMap@.
+-- | Perform partial matching against a @TMap@.
 --
---   @match xs tmap@ returns two values. First value is the result of
---   'lookup'. Second value is another @TMap@, which holds mapping between
---   all pair of @ys@ and @b@, such that @tmap@ maps @(xs ++ ys)@ to @b@.
+--   @match xs tmap@ returns two values. The first value is the result of
+--   'lookup'. The second is another @TMap@ for all keys which contain @xs@ as their prefix.
+--   The keys of the returned map do not contain the common prefix @xs@.
+--
+--   ===== Example
+--
+--   >>> let x = 'fromList' [("ham", 1), ("bacon", 2), ("hamburger", 3)]
+--   >>> match "ham" x
+--   (Just 1,fromList [("",1),("burger",3)])
 match :: (Ord c) => [c] -> TMap c a -> (Maybe a, TMap c a)
 match []     t@(TMap (Node ma _)) = (ma, t)
 match (c:cs)   (TMap (Node _  e)) =
@@ -288,22 +294,23 @@ cons c t = TMap (Node Nothing (Map.singleton c t))
 
 -- | Inserts an entry of key and value pair.
 --
---   Already existing value will be overwritten, i.e.
---   > insert = insertWith (const a)
+--   Already existing value will be overwritten.
+--
+--   > insert = 'insertWith' (const a)
 insert :: (Ord c) => [c] -> a -> TMap c a -> TMap c a
 insert cs a = revise (const a) cs
 
 -- | Deletes an entry with given key.
 --
---   > delete = update (const Nothing)
+--   > delete = 'update' (const Nothing)
 delete :: (Ord c) => [c] -> TMap c a -> TMap c a
 delete = update (const Nothing)
 
--- | @insertWith op xs a tmap@ inserts an key (@xs@) and value (@a@) pair
+-- | @insertWith op xs a tmap@ inserts an entry of key-value pair @(cs,a)@
 --   to the @tmap@. If @tmap@ already has an entry with key equals to
 --   @xs@, its value @b@ is replaced with @op a b@.
 --
---   > insertWith op cs a = revise (maybe a (op a)) cs
+--   > insertWith op cs a = 'revise' (maybe a (op a)) cs
 insertWith :: (Ord c) => (a -> a -> a) -> [c] -> a -> TMap c a -> TMap c a
 insertWith f cs a = revise (maybe a (f a)) cs
 
@@ -314,7 +321,7 @@ insertWith f cs a = revise (maybe a (f a)) cs
 --   the entry is deleted. Otherwise, if it returned @Just a'@, the value of
 --   the entry is replaced with @a'@.
 --
---   > deleteWith f cs b = update (f b) cs
+--   > deleteWith f cs b = 'update' (f b) cs
 deleteWith :: (Ord c) => (b -> a -> Maybe a) -> [c] -> b -> TMap c a -> TMap c a
 deleteWith f cs b = update (f b) cs
 
@@ -328,7 +335,7 @@ adjust f = F.foldr step base
       in TMap (Node ma e')
 {-# INLINE adjust #-}
 
--- | Apply a function @f@ to the entry with given key. If there is no such
+-- | Apply a function @f@ to the entry with the given key. If there is no such
 --   entry, insert an entry with value @f Nothing@.
 revise :: (Ord c) => (Maybe a -> a) -> [c] -> TMap c a -> TMap c a
 revise f = fst . F.foldr step (base, just (f Nothing))
@@ -370,8 +377,8 @@ update_ f = F.foldr step base
 --     @f (Just a)@.
 --
 --   This function always evaluates @f Nothing@ in addition to determine
---   operation applied to given key.
---   If you never use `alter` on a missing key, consider using 'update' instead.
+--   operation applied to the given key.
+--   If you're not going to use @alter@ on missing keys, consider using @update@ instead.
 alter :: (Ord c) => (Maybe a -> Maybe a) -> [c] -> TMap c a -> TMap c a
 alter f =
   case f Nothing of
@@ -449,27 +456,49 @@ differenceWith f x y = fromMaybe empty $ go x y
         ez = Map.differenceWith go ex ey
 
 {- |
-Make new @TMap@ from two @TMap@s. Constructed @TMap@
-has keys which are concatenation of any combination from
-two input maps.
+Creates a new @TMap@ from two @TMap@s. The keys of the new map
+are concatenations of one key from the first map and another one from the second map.
 
-Corresponding values for these keys are combined with given function
+Corresponding values for these keys are calculated with the given function
 of type @(x -> y -> z)@. If two different concatenations yield
-a same key, corresponding values for these keys are combined with
-a 'Semigroup' operation @<>@.
+the same key, the calculated values for these keys are combined with the 'Semigroup' operation @<>@.
 
-There is no guarantees on which order duplicate values are combined with @<>@.
-So it must be commutative semigroup to get a stable result.
+The behavior of @appendWith@ is equivalent to the following implementation.
+
+@
+appendWith :: (Ord c, Semigroup z) => (x -> y -> z) ->
+  TMap c x -> TMap c y -> TMap c z
+appendWith f x y = 'fromListWith' (flip (<>))
+  [ (kx ++ ky, f valx valy)
+    | (kx, valx) <- 'toAscList' x
+    , (ky, valy) <- toAscList y ]
+@
+
+In other words, a set of colliding key-valur pairs is combined in increasing order of the left key.
+For example, suppose @x, y@ are @TMap@ with these key-value pairs,
+and @kx1 ++ ky3, kx2 ++ ky2, kx3 ++ ky1@ are all equal to the same key @kz@.
+
+@
+x = 'fromAscList' [ (kx1, x1), (kx2, x2), (kx3, x3) ] -- kx1 < kx2 < kx3
+y = fromAscList [ (ky1, y1), (ky2, y2), (ky3, y3) ]
+@
+
+On these maps, @appendWith@ combines the values for these colliding keys
+in the order of @kx*@.
+
+@
+'lookup' kz (appendWith f x y) == Just (f x1 y3 <> f x2 y2 <> f x3 y1)
+@
 
 ===== Example
 
-> let x = fromList [("a", 1), ("aa", 2)]     :: TMap Char (Sum Int)
->     y = fromList [("aa", 10), ("aaa", 20)] :: TMap Char (Sum Int)
+> let x = fromList [("a", 1), ("aa", 2)]     :: TMap Char Int
+>     y = fromList [("aa", 10), ("aaa", 20)] :: TMap Char Int
 >
-> appendWith (*) x y =
->   fromList [ ("aaa", 1 * 10)
->            , ("aaaa", 1 * 20 + 2 * 10)
->            , ("aaaaa", 2 * 20) ]
+> appendWith (\a b -> show (a,b)) x y ==
+>   fromList [ ("aaa", "(1,10)")
+>            , ("aaaa", "(1,20)" <> "(2,10)")
+>            , ("aaaaa", "(2,20)") ]
 
 -}
 appendWith :: (Ord c, Semigroup z) => (x -> y -> z) ->

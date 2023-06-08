@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use curry" #-}
 module Data.Trie.MapSpec(
   spec
 ) where
@@ -107,10 +109,10 @@ spec = do
   specify "toMap (difference a b) = Map.difference (toMap a) (toMap b)" $
     property $ \(TMap' a) (TMap' b) ->
       toMap (difference a b) == Map.difference (toMap a) (toMap b)
-  specify "toMap (append a b) = mapAppend (toMap a) (toMap b)" $
+  specify "appendWith = appendWithSpec" $
     property $ \(TMap' a) (TMap' b) ->
-      toMap (getSum <$> appendWith (\x y -> Sum (x * y)) a b) ==
-      mapAppend (toMap a) (toMap b)
+      appendWith (\x y -> show (x,y)) a b ==
+      appendWithSpec (\x y -> show (x,y)) a b 
       
   specify "validTMap (union a b)" $
     property $ \(TMap' a) (TMap' b) ->
@@ -125,11 +127,9 @@ spec = do
     property $ \(TMap' a) (TMap' b) ->
       validTMap (getSum <$> appendWith (\x y -> Sum (x * y)) a b)
 
-
-mapAppend :: (Ord c) => Map [c] Int -> Map [c] Int -> Map [c] Int
-mapAppend ass bss =
-  sumUnions
-    [ Map.mapKeysMonotonic (as ++) $ Map.map (v *) bss
-      | (as, v) <- Map.toAscList ass ]
-  where
-    sumUnions = foldl' (Map.unionWith (+)) Map.empty
+appendWithSpec :: (Ord c, Semigroup z) => (x -> y -> z) ->
+  TMap c x -> TMap c y -> TMap c z
+appendWithSpec f x y = fromListWith (flip (<>))
+  [ (kx ++ ky, f valx valy)
+    | (kx, valx) <- toAscList x
+    , (ky, valy) <- toAscList y ]
