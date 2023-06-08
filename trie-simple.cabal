@@ -18,6 +18,7 @@ build-type:          Simple
 extra-source-files:  README.md
 extra-doc-files:     CHANGELOG.md
 cabal-version:       2.0
+tested-with:         GHC == 8.10.7, GHC == 9.0.2, GHC == 9.2.7, GHC == 9.4.5, GHC == 9.6.2
 
 source-repository head
   type:     git
@@ -32,16 +33,16 @@ library
                        Data.Trie.Map.Internal
   other-modules:       Data.Trie.Set.Hidden,
                        Data.Trie.Map.Hidden
-  build-depends:       base         >= 4.9     && < 4.19,
+  build-depends:       base         >= 4.14     && < 4.19,
                        containers   >= 0.5.7.1 && < 0.7,
                        deepseq      >= 1.4.2.0 && < 1.5,
                        mtl          >= 2.2.1   && < 2.4,
-                       indexed-traversable >= 0.1.1,
-                       witherable   >= 0.4,
-                       matchable    >= 0.1.2,
-                       hashable     >= 1.3,
-                       semialign    >= 1.3,
-                       these        >= 1
+                       indexed-traversable >= 0.1.1 && <0.2,
+                       witherable   ^>= 0.4,
+                       matchable    ^>= 0.1.2,
+                       hashable     >= 1.3 && < 1.5,
+                       semialign    >= 1.3 && < 1.4,
+                       these        >= 1 && < 2
   default-language:    Haskell2010
   ghc-options:         -Wall -Wno-dodgy-exports
 
