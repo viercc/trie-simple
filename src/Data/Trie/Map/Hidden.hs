@@ -46,8 +46,6 @@ where
 
 import           Prelude                hiding (lookup, null)
 
-import           Data.Functor.Const
-import           Data.Functor.Identity
 import           Data.Semigroup
 
 import           Control.Applicative    hiding (empty)
@@ -160,14 +158,13 @@ instance (Hashable c, Hashable a) => Hashable (TMap c a) where
   hashWithSalt = hashWithSalt2
 
 instance FunctorWithIndex [c] (TMap c) where
-  imap f (TMap (Node ma e)) = TMap $ Node (f [] <$> ma) (Map.mapWithKey (\c t' -> imap (f . (c:)) t') e)
+  imap = mapWithKey
 
 instance FoldableWithIndex [c] (TMap c) where
-  ifoldMap = ifoldMapDefault
+  ifoldr = foldrWithKey
 
 instance TraversableWithIndex [c] (TMap c) where
-  itraverse f (TMap (Node ma e)) = fmap TMap $
-    Node <$> traverse (f []) ma <*> Map.traverseWithKey (\c t' -> itraverse (f . (c:)) t') e
+  itraverse = traverseWithKey
 
 instance Ord c => Filterable (TMap c) where
   mapMaybe f = go
@@ -251,7 +248,9 @@ null (TMap (Node ma e)) = isNothing ma && Map.null e
 --   Note that this operation takes O(number of nodes),
 --   unlike O(1) of 'Map.size'.
 count :: TMap c a -> Int
-count = F.length
+count = foldTMap count'
+  where
+    count' (Node ma e) = F.foldl' (+) (length ma) e
 
 -- | Returns list of key strings, in ascending order.
 keys :: TMap c a -> [[c]]
@@ -263,7 +262,9 @@ keys = foldTMap keys'
 
 -- | Returns list of values, in ascending order by its key.
 elems :: TMap c a -> [a]
-elems = F.toList
+elems = foldTMap elems'
+  where
+    elems' (Node ma e) = F.toList ma ++ F.foldr (++) [] e
 
 -- * Construction
 
@@ -495,16 +496,13 @@ instance Functor (TMap c) where
       go (TMap (Node ma e)) = TMap (Node (fmap f ma) (Map.map go e))
 
 instance Foldable (TMap c) where
-  foldMap f = go
-    where
-      go (TMap (Node ma e)) = case ma of
-        Nothing -> foldMap go e
-        Just a  -> f a `mappend` foldMap go e
+  foldr f z = foldr f z . elems
+  toList = elems
+  null = Data.Trie.Map.Hidden.null
+  length = count
 
 instance Traversable (TMap c) where
-  traverse f = go
-    where
-      go (TMap (Node a e)) = TMap <$> (Node <$> traverse f a <*> traverse go e)
+  traverse f = traverseWithKey (const f)
 
 -- | 'unionWith'-based
 instance (Ord c, Semigroup a) => Semigroup (TMap c a) where
@@ -567,10 +565,8 @@ fromMap :: (Eq c) => Map [c] a -> TMap c a
 fromMap = fromAscList . Map.toAscList
 
 keysTSet :: TMap c a -> TSet c
-keysTSet = foldTMap keysTSet'
-  where
-    keysTSet' (Node ma e) =
-      TSet (TSet.Node (isJust ma) e)
+keysTSet (TMap (Node ma e)) =
+    TSet (TSet.Node (isJust ma) (Map.map keysTSet e))
 
 fromTSet :: ([c] -> a) -> TSet c -> TMap c a
 fromTSet f = go []
@@ -620,31 +616,24 @@ toParser__ f eot = void . toParser_ f eot
 -- >                     toAscList
 traverseWithKey :: (Applicative f) =>
   ([c] -> a -> f b) -> TMap c a -> f (TMap c b)
-traverseWithKey f = go []
-  where
-    go q (TMap (Node ma e)) =
-      let step c = go (c : q)
-          e' = Map.traverseWithKey step e
-          mb = maybe (pure Nothing)
-                     (\a -> Just <$> f (reverse q) a)
-                     ma
-      in TMap <$> (Node <$> mb <*> e')
+traverseWithKey f (TMap (Node Nothing e)) = TMap . Node Nothing <$> Map.traverseWithKey (\c t' -> traverseWithKey (f . (c:)) t') e
+traverseWithKey f (TMap (Node (Just a) e)) = fmap TMap $ Node <$> (Just <$> f [] a) <*> Map.traverseWithKey (\c t' -> traverseWithKey (f . (c:)) t') e
 
 -- | Same semantics to following defintion, but have
 --   more efficient implementation.
 --
--- > traverseWithKey f = fromAscList .
--- >                     map (\(cs,a) -> (cs,  f cs a)) .
--- >                     toAscList
+-- > mapWithKey f = fromAscList .
+-- >                map (\(cs,a) -> (cs,  f cs a)) .
+-- >                toAscList
 mapWithKey :: ([c] -> a -> b) -> TMap c a -> TMap c b
-mapWithKey f = runIdentity . traverseWithKey (\k a -> Identity (f k a))
+mapWithKey f (TMap (Node ma e)) = TMap $ Node (f [] <$> ma) (Map.mapWithKey (\c t' -> mapWithKey (f . (c:)) t') e)
 
 -- | Same semantics to following defintion, but have
 --   more efficient implementation.
 --
 -- > foldMapWithKey f = foldMap (uncurry f) . toAscList
 foldMapWithKey :: (Monoid r) => ([c] -> a -> r) -> TMap c a -> r
-foldMapWithKey f = getConst . traverseWithKey (\k a -> Const (f k a))
+foldMapWithKey f = foldrWithKey (\k v r -> f k v <> r) mempty
 
 -- | Same semantics to following defintion, but have
 --   more efficient implementation.
@@ -663,7 +652,9 @@ foldrWithKey f z (TMap (Node ma e)) =
 
 foldTMap :: (Node c a r -> r) -> TMap c a -> r
 foldTMap f = go
-  where go (TMap (Node a e)) = f (Node a (Map.map go e))
+  where
+    -- Use lazy @<$>@
+    go (TMap (Node a e)) = f (Node a (go <$> e))
 
 nonEmptyTMap :: TMap c a -> Maybe (TMap c a)
 nonEmptyTMap t
