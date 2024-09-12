@@ -4,3 +4,5 @@ optional-packages: ./trie-simple-not-applicative
 package QuickCheck
     flags: -templateHaskell
 
+package gauge
+    flags: -analysis
