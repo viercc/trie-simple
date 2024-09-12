@@ -18,7 +18,7 @@ build-type:          Simple
 extra-source-files:  README.md
 extra-doc-files:     CHANGELOG.md
 cabal-version:       2.0
-tested-with:         GHC == 8.10.7, GHC == 9.0.2, GHC == 9.2.7, GHC == 9.4.5, GHC == 9.6.2
+tested-with:         GHC == 9.2.8, GHC == 9.4.8, GHC == 9.6.6, GHC == 9.8.2, GHC ==9.10.1
 
 source-repository head
   type:     git
@@ -35,7 +35,7 @@ library
                        Data.Trie.Map.Hidden
   build-depends:       base         >= 4.14     && < 4.21,
                        containers   >= 0.5.7.1 && < 0.8,
-                       deepseq      >= 1.4.2.0 && < 1.6,
+                       deepseq      >= 1.4.2.0 && < 1.7,
                        mtl          >= 2.2.1   && < 2.4,
                        indexed-traversable >= 0.1.1 && <0.2,
                        witherable   >= 0.4 && < 0.6,
