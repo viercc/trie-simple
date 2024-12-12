@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Main(main) where
 
-import Gauge.Main
+import Test.Tasty.Bench
 
 import qualified Data.Trie.Set as TSet
 import Data.Trie.Map (TMap)
