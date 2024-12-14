@@ -26,6 +26,10 @@ Benchmarks compared against plain `Map` and `Set`.
 
 Each of these benchmarks has two sets of point and errorbars, representing two datasets they are run against.
 
+**Notice**: the datasets are **not** included in the tarball distributed from Hackage.
+To run the benchmark, either get the entire repository from the source repository (GitHub) or
+modify the benchmark program and supply any dataset of your choice.
+
 ## About License
 
 [LICENSE](LICENSE) tells the licence of this project, EXCEPT

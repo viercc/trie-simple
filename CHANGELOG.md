@@ -1,3 +1,8 @@
+# 0.4.3
+
+- No changes to the library itself
+- Migrates the benchmark framework from `gauge` to `tasty-bench`
+
 # 0.4.2
 
 - Compatibility changes
