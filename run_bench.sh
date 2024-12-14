@@ -23,9 +23,13 @@ fi
 # Run benchmark
 datestr="$(date -Iseconds)"
 benchfile="benchdata/bench-${datestr}.csv"
-cabal run trie-benchmark -- -s "--csv=$benchfile"
+cabal run trie-benchmark -- "--csv=$benchfile"
 # Preprocess the output file
-sed -e 's/Name,Mean/Dataset\/Name\/Category\/Method,MeanTime/' "$benchfile" | tr '/' ',' > ./benchdata/bench_preprocessed.csv
+sed \
+  -e '1c Dataset,Name,Method,Mean,SDx2' \
+  -e 's/^All\.\([[:alnum:]]*\)\.\([[:alnum:]]*\)\.\([[:alnum:]]*\)\.\([[:alnum:]]*\)/\1,\2,"\3.\4"/g' \
+  "$benchfile" \
+  > ./benchdata/bench_preprocessed.csv
 # Draw charts using R
 R CMD BATCH bench/analyze.R
 
