@@ -73,7 +73,7 @@ benchmark trie-benchmark
   build-depends:       base,
                        deepseq,
                        containers,
-                       gauge,
+                       tasty-bench,
                        vector,
                        mwc-random,
                        trie-simple
