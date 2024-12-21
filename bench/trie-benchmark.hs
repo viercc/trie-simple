@@ -20,6 +20,7 @@ main :: IO ()
 main = defaultMain
   [ benchAll englishDataset "English"
   , benchAll wikiDataset "Wiki"
+  , env englishDataset benchTMapSpecial
   ]
 
 benchAll :: IO Dataset -> String -> Benchmark
@@ -205,3 +206,32 @@ mapProd m1 m2 =
     [ prod1 s x m2 | (s,x) <- Map.toList m1 ]
   where
     prod1 s x m = Map.mapKeysMonotonic (s++) $ Map.map (x*) m
+
+benchTMapSpecial :: Dataset -> Benchmark
+benchTMapSpecial ~Dataset{..} = env (pure $ lenTMap dictA) $ \mapA ->
+  bgroup "TMapSp" [
+    bgroup "lookupPrefixes" [
+      bgroup "key" [
+        bench "naive" $ nf (lookupPrefixesNaive key) mapA
+      , bench "lib"   $ nf (TMap.lookupPrefixes key) mapA
+      ],
+      bgroup "longKey" [
+        bench "naive" $ nf (lookupPrefixesNaive longKey) mapA
+      , bench "lib"   $ nf (TMap.lookupPrefixes longKey) mapA
+      ],
+      bgroup "rareKey" [
+        bench "naive" $ nf (lookupPrefixesNaive rareKey) mapA
+      , bench "lib"   $ nf (TMap.lookupPrefixes rareKey) mapA
+      ]
+    ]
+  ]
+  where
+    key = "electroencephalographs"
+    -- TMap/TSet are spine-strict. lookupNaive fail to early-return for "too long" key
+    longKey = concat (replicate 100 key)
+    rareKey = "bbbbbbbbbbbb"
+
+lookupPrefixesNaive :: (Ord c) => [c] -> TMap c Int -> [([c], Int)]
+lookupPrefixesNaive xs tmap = TMap.toAscList $ TMap.intersection tmap (TMap.fromTSet id xsPrefixes)
+  where
+    xsPrefixes = TSet.prefixes (TSet.singleton xs)

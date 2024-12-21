@@ -7,6 +7,7 @@ module Data.Trie.Map.Hidden(
   -- * Queries
   match,
   lookup,
+  lookupPrefixes,
   member, notMember,
   null, count,
   keys, elems,
@@ -222,11 +223,11 @@ instance (Eq c) => Matchable (TMap c) where
 --   'lookup'. The second is another @TMap@ for all keys which contain @xs@ as their prefix.
 --   The keys of the returned map do not contain the common prefix @xs@.
 --
---   ===== Example
---
---   >>> let x = 'fromList' [("ham", 1), ("bacon", 2), ("hamburger", 3)]
---   >>> match "ham" x
---   (Just 1,fromList [("",1),("burger",3)])
+-- ===== Example
+-- 
+-- >>> let x = fromList [("ham", 1), ("bacon", 2), ("hamburger", 3)]
+-- >>> match "ham" x
+-- (Just 1,fromList [("",1),("burger",3)])
 match :: (Ord c) => [c] -> TMap c a -> (Maybe a, TMap c a)
 match []     t@(TMap (Node ma _)) = (ma, t)
 match (c:cs)   (TMap (Node _  e)) =
@@ -238,6 +239,27 @@ match (c:cs)   (TMap (Node _  e)) =
 --   from @xs@ to @a@, and returns @Nothing@ if not.
 lookup :: (Ord c) => [c] -> TMap c a -> Maybe a
 lookup cs = fst . match cs
+
+-- | @lookupPrefixes xs tmap@ performs 'lookup' for every prefixes of the input string @xs@
+--   and returns list of every pair of prefix and value exising in @tmap@.
+--
+-- ===== Example
+-- 
+-- >>> let x = fromList [("ham", 1), ("bacon", 2), ("hamburger", 3)]
+-- >>> lookupPrefixes "hamburger and bacon" x
+-- [("ham",1),("hamburger",3)]
+lookupPrefixes :: (Ord c) => [c] -> TMap c a -> [([c], a)]
+lookupPrefixes = go []
+  where
+    entry revPrefix ma = case ma of
+      Nothing -> id
+      Just a -> ((reverse revPrefix, a) :)
+    
+    go revPrefix [] (TMap (Node ma _)) = entry revPrefix ma []
+    go revPrefix (x:xs) (TMap (Node ma e)) = entry revPrefix ma $
+      case Map.lookup x e of
+        Nothing -> []
+        Just rest -> go (x : revPrefix) xs rest
 
 member, notMember :: (Ord c) => [c] -> TMap c a -> Bool
 member cs = isJust . lookup cs

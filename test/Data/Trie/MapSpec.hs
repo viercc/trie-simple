@@ -7,7 +7,8 @@ module Data.Trie.MapSpec(
 import           Test.Hspec
 import           Test.QuickCheck
 
-import           Data.List (sortBy, foldl')
+import qualified Data.Foldable as F
+import           Data.List (sortBy, foldl', inits)
 import           Data.Ord
 import           Data.Map            (Map)
 import qualified Data.Map            as Map
@@ -68,6 +69,11 @@ spec = do
     property $ \(TMap'' t) ->
       let strMap = toMap t
       in property $ \str -> T.lookup str t == Map.lookup str strMap
+  specify "lookupPrefixes k t = [ (prek, v) | prek <- inits k, v <- toList $ Map.lookup prek (toMap t) ]" $
+    property $ \(TMap'' t) ->
+      let strMap = toMap t
+          slow str = [ (prek, v) | prek <- inits str, v <- F.toList $ Map.lookup prek strMap ]
+      in property $ \str -> T.lookupPrefixes str t == slow str
   specify "lookup (k ++ l) t == lookup l (snd (match k t))" $
     property $ \k l (TMap'' t) ->
       T.lookup (k ++ l) t == T.lookup l (snd (T.match k t))
