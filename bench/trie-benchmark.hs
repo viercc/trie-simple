@@ -43,7 +43,8 @@ benchTSet ~Dataset{..} = bgroup "TSet"
         , bench "stringCount" (nf TSet.count mapA)
         , bench "enumerate10" (nf (take 10 . TSet.enumerate) mapA)
         , bench "enumerateAll" (nf TSet.enumerate mapA)
-        , bench "match" (nf (\dict' -> map (`TSet.member` dict') gibberish) mapA) ]
+        , bench "member" (nf (\dict' -> map (`TSet.member` dict') gibberish) mapA)
+        , bench "beginWith" (whnf (`TSet.beginWith` shortKey) mapA) ]
   , env (pure (TSet.fromList dictA)) $ \mapA ->
       bgroup "single-item"
         [ bench "insert1" (whnf (TSet.insert "######fake_key######") mapA)
@@ -62,7 +63,9 @@ benchTSet ~Dataset{..} = bgroup "TSet"
         , bench "prefixes" (whnf TSet.prefixes mapA)
         , bench "suffixes" (whnf TSet.suffixes mapB) ]
   ]
-  where realKey = head dictA
+  where
+    realKey = head dictA
+    shortKey = take 3 realKey
 
 benchSet :: Dataset -> Benchmark
 benchSet ~Dataset{..} = bgroup "Set"
@@ -79,7 +82,8 @@ benchSet ~Dataset{..} = bgroup "Set"
         , bench "stringCount" (nf Set.size mapA)
         , bench "enumerate10" (nf (take 10 . Set.toList) mapA)
         , bench "enumerateAll" (nf Set.toList mapA)
-        , bench "match" (nf (\dict' -> map (`Set.member` dict') gibberish) mapA) ]
+        , bench "member" (nf (\dict' -> map (`Set.member` dict') gibberish) mapA)
+        , bench "beginWith" (whnf (`setBeginWith` shortKey) mapA) ]
   , env (pure (Set.fromList dictA)) $ \mapA ->
       bgroup "single-item"
         [ bench "insert1" (whnf (Set.insert "######fake_key######") mapA)
@@ -98,7 +102,9 @@ benchSet ~Dataset{..} = bgroup "Set"
         , bench "prefixes" (whnf setPrefixes mapA)
         , bench "suffixes" (whnf setSuffixes mapB) ]
   ]
-  where realKey = head dictA
+  where
+    realKey = head dictA
+    shortKey = take 3 realKey
 
 setAppend :: (Ord c) => Set [c] -> Set [c] -> Set [c]
 setAppend ass bss = Set.unions
@@ -113,6 +119,22 @@ setSuffixes :: (Ord c) => Set [c] -> Set [c]
 setSuffixes ass = Set.fromList
   [ bs | as <- Set.toAscList ass, bs <- tails as ]
 
+setBeginWith :: (Ord c) => Set [c] -> [c] -> Set [c]
+setBeginWith ass prefix =
+  let n = length prefix
+      -- ass' = { as | as ∈ ass, as >= prefix }
+      ass' = Set.dropWhileAntitone (< prefix) ass
+      -- ass'' = { as | as ∈ ass', prefix `isPrefixOf` as }
+      -- Note: `isPrefix prefix :: [c] -> Bool` is antitone predicate for ass'!
+      --       In fact, take any `xs, ys` such that `prefix <= xs <= ys`.
+      --       Then `isPrefix prefix ys ==> isPrefix prefix xs` holds.
+      ass'' = Set.takeWhileAntitone (isPrefixOf prefix) ass'
+  in Set.mapMonotonic (drop n) ass''
+
+isPrefixOf :: Eq c => [c] -> [c] -> Bool
+isPrefixOf [] _ = True
+isPrefixOf (_:_) [] = False
+isPrefixOf (p:ps) (a:as) = p == a && isPrefixOf ps as
 
 benchTMap :: Dataset -> Benchmark
 benchTMap ~Dataset{..} = bgroup "TMap" 
@@ -125,9 +147,9 @@ benchTMap ~Dataset{..} = bgroup "TMap"
         [ bench "isEmpty" (nf TMap.null mapA)
         , bench "stringCount" (nf TMap.count mapA)
         , bench "enumerate10" (nf (take 10 . TMap.toList) mapA)
-        , bench "match" (nf (\dict' -> map (`TMap.member` dict') gibberish) mapA)
         , bench "lookupPrefixes" $ nf (TMap.lookupPrefixes longKey) mapA
-        ]
+        , bench "member" (nf (\dict' -> map (`TMap.member` dict') gibberish) mapA)
+        , bench "match" (whnf (consumeMatch . TMap.match shortKey) mapA) ]
   , env (pure (lenTMap dictA)) $ \mapA ->
       bgroup "single-item"
         [ bench "insert1" (whnf (TMap.insert "######fake_key######" 1) mapA)
@@ -153,16 +175,18 @@ benchTMap ~Dataset{..} = bgroup "TMap"
   where
     realKey = head dictA
     longKey = concat (replicate 100 realKey)
-
+    shortKey = take 3 realKey
 alterFn :: Maybe Int -> Maybe Int
-alterFn Nothing = Just 1000
 alterFn (Just a) = if even a then Just a else Nothing
-
 lenTMap :: (Ord c) => [[c]] -> TMap c Int
 lenTMap dict = TMap.fromList [(w, length w) | w <- dict]
 
 tmapProd :: (Ord c) => TMap c Int -> TMap c Int -> TMap c (Sum Int)
 tmapProd = TMap.appendWith (\x y -> Sum (x * y))
+
+consumeMatch :: (Maybe a, r) -> r
+consumeMatch (ma, r) = (maybe () (`seq` ()) ma) `seq` r
+{-# INLINE consumeMatch #-}
 
 benchMap :: Dataset -> Benchmark
 benchMap ~Dataset{..} = bgroup "Map" 
@@ -175,8 +199,10 @@ benchMap ~Dataset{..} = bgroup "Map"
         [ bench "isEmpty" (nf Map.null mapA)
         , bench "stringCount" (nf Map.size mapA)
         , bench "enumerate10" (nf (take 10 . Map.toList) mapA)
-        , bench "match" (nf (\dict' -> map (`Map.member` dict') gibberish) mapA)
-        , bench "lookupPrefixes" $ nf (mapLookupPrefixes longKey) mapA ]
+        , bench "lookupPrefixes" $ nf (mapLookupPrefixes longKey) mapA
+        , bench "member" (nf (\dict' -> map (`Map.member` dict') gibberish) mapA)
+        , bench "match" (whnf (consumeMatch . mapMatch shortKey) mapA)
+        ]
   , env (pure (lenMap dictA)) $ \mapA ->
       bgroup "single-item"
         [ bench "insert1" (whnf (Map.insert "######fake_key######" 1) mapA)
@@ -202,6 +228,7 @@ benchMap ~Dataset{..} = bgroup "Map"
   where
     realKey = head dictA
     longKey = concat (replicate 100 realKey)
+    shortKey = take 3 realKey
 
 lenMap :: (Ord c) => [[c]] -> Map [c] Int
 lenMap dict = Map.fromList [(w, length w) | w <- dict]
@@ -227,3 +254,10 @@ mapLookupIncreasingKeys = go
       | otherwise = case Map.splitLookup k m of
           (_, Nothing, m') -> go keys m'
           (_, Just a,  m') -> (k,a) : go keys m'
+
+mapMatch :: (Ord c) => [c] -> Map [c] a -> (Maybe a, Map [c] a)
+mapMatch prefix m =
+  let n = length prefix
+      m' = Map.dropWhileAntitone (< prefix) m
+      m'' = Map.takeWhileAntitone (isPrefixOf prefix) m'
+  in (Map.lookup prefix m'', Map.mapKeysMonotonic (drop n) m'')
