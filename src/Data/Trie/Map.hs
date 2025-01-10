@@ -4,6 +4,7 @@ module Data.Trie.Map(
   -- * Queries
   match,
   lookup,
+  lookupPrefixes,
   member, notMember,
   null, count,
   keys, elems,
