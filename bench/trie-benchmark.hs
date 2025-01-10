@@ -20,7 +20,6 @@ main :: IO ()
 main = defaultMain
   [ benchAll englishDataset "English"
   , benchAll wikiDataset "Wiki"
-  , env englishDataset benchTMapSpecial
   ]
 
 benchAll :: IO Dataset -> String -> Benchmark
@@ -126,7 +125,9 @@ benchTMap ~Dataset{..} = bgroup "TMap"
         [ bench "isEmpty" (nf TMap.null mapA)
         , bench "stringCount" (nf TMap.count mapA)
         , bench "enumerate10" (nf (take 10 . TMap.toList) mapA)
-        , bench "match" (nf (\dict' -> map (`TMap.member` dict') gibberish) mapA) ]
+        , bench "match" (nf (\dict' -> map (`TMap.member` dict') gibberish) mapA)
+        , bench "lookupPrefixes" $ nf (TMap.lookupPrefixes longKey) mapA
+        ]
   , env (pure (lenTMap dictA)) $ \mapA ->
       bgroup "single-item"
         [ bench "insert1" (whnf (TMap.insert "######fake_key######" 1) mapA)
@@ -149,7 +150,9 @@ benchTMap ~Dataset{..} = bgroup "TMap"
         , env (pure $ lenTMap gibberish) $ \mapSmall ->
             bench "append" (whnf (uncurry tmapProd) (mapSmall, mapSmall)) ]
   ]
-  where realKey = head dictA
+  where
+    realKey = head dictA
+    longKey = concat (replicate 100 realKey)
 
 alterFn :: Maybe Int -> Maybe Int
 alterFn Nothing = Just 1000
@@ -172,7 +175,8 @@ benchMap ~Dataset{..} = bgroup "Map"
         [ bench "isEmpty" (nf Map.null mapA)
         , bench "stringCount" (nf Map.size mapA)
         , bench "enumerate10" (nf (take 10 . Map.toList) mapA)
-        , bench "match" (nf (\dict' -> map (`Map.member` dict') gibberish) mapA) ]
+        , bench "match" (nf (\dict' -> map (`Map.member` dict') gibberish) mapA)
+        , bench "lookupPrefixes" $ nf (mapLookupPrefixes longKey) mapA ]
   , env (pure (lenMap dictA)) $ \mapA ->
       bgroup "single-item"
         [ bench "insert1" (whnf (Map.insert "######fake_key######" 1) mapA)
@@ -195,7 +199,9 @@ benchMap ~Dataset{..} = bgroup "Map"
         , env (pure $ lenMap gibberish) $ \mapSmall ->
             bench "append" (whnf (uncurry mapProd) (mapSmall, mapSmall)) ]
   ]
-  where realKey = head dictA
+  where
+    realKey = head dictA
+    longKey = concat (replicate 100 realKey)
 
 lenMap :: (Ord c) => [[c]] -> Map [c] Int
 lenMap dict = Map.fromList [(w, length w) | w <- dict]
@@ -207,31 +213,17 @@ mapProd m1 m2 =
   where
     prod1 s x m = Map.mapKeysMonotonic (s++) $ Map.map (x*) m
 
-benchTMapSpecial :: Dataset -> Benchmark
-benchTMapSpecial ~Dataset{..} = env (pure $ lenTMap dictA) $ \mapA ->
-  bgroup "TMapSp" [
-    bgroup "lookupPrefixes" [
-      bgroup "key" [
-        bench "naive" $ nf (lookupPrefixesNaive key) mapA
-      , bench "lib"   $ nf (TMap.lookupPrefixes key) mapA
-      ],
-      bgroup "longKey" [
-        bench "naive" $ nf (lookupPrefixesNaive longKey) mapA
-      , bench "lib"   $ nf (TMap.lookupPrefixes longKey) mapA
-      ],
-      bgroup "rareKey" [
-        bench "naive" $ nf (lookupPrefixesNaive rareKey) mapA
-      , bench "lib"   $ nf (TMap.lookupPrefixes rareKey) mapA
-      ]
-    ]
-  ]
-  where
-    key = "electroencephalographs"
-    -- TMap/TSet are spine-strict. lookupNaive fail to early-return for "too long" key
-    longKey = concat (replicate 100 key)
-    rareKey = "bbbbbbbbbbbb"
+mapLookupPrefixes :: Ord c => [c] -> Map [c] Int -> [([c], Int)]
+mapLookupPrefixes xs m = 
+  let m' = Map.takeWhileAntitone (\k -> k <= xs) m
+  in mapLookupIncreasingKeys (inits xs) m'
 
-lookupPrefixesNaive :: (Ord c) => [c] -> TMap c Int -> [([c], Int)]
-lookupPrefixesNaive xs tmap = TMap.toAscList $ TMap.intersection tmap (TMap.fromTSet id xsPrefixes)
+mapLookupIncreasingKeys :: Ord k => [k] -> Map k a -> [(k,a)]
+mapLookupIncreasingKeys = go
   where
-    xsPrefixes = TSet.prefixes (TSet.singleton xs)
+    go []       _ = []
+    go (k:keys) m
+      | Map.null m = []
+      | otherwise = case Map.splitLookup k m of
+          (_, Nothing, m') -> go keys m'
+          (_, Just a,  m') -> (k,a) : go keys m'
