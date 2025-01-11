@@ -26,8 +26,8 @@ benchfile="benchdata/bench-${datestr}.csv"
 cabal run trie-benchmark -- "--csv=$benchfile"
 # Preprocess the output file
 sed \
-  -e '1c Dataset,Name,Method,Mean,SDx2' \
-  -e 's/^All\.\([[:alnum:]]*\)\.\([[:alnum:]]*\)\.\([[:alnum:]]*\)\.\([[:alnum:]]*\)/\1,\2,"\3.\4"/g' \
+  -e '1c Dataset,Name,MethodGroup,Method,Mean,SDx2' \
+  -e 's/^All\.\([-_[:alnum:]]*\)\.\([-_[:alnum:]]*\)\.\([-_[:alnum:]]*\)\.\([-_[:alnum:]]*\)/\1,\2,\3,\4/g' \
   "$benchfile" \
   > ./benchdata/bench_preprocessed.csv
 # Draw charts using R
