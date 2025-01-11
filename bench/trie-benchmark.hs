@@ -176,8 +176,11 @@ benchTMap ~Dataset{..} = bgroup "TMap"
     realKey = head dictA
     longKey = concat (replicate 100 realKey)
     shortKey = take 3 realKey
+
 alterFn :: Maybe Int -> Maybe Int
+alterFn Nothing = Nothing
 alterFn (Just a) = if even a then Just a else Nothing
+
 lenTMap :: (Ord c) => [[c]] -> TMap c Int
 lenTMap dict = TMap.fromList [(w, length w) | w <- dict]
 
