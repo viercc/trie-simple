@@ -1,3 +1,8 @@
+# 0.4.4
+
+- ([#7](https://github.com/viercc/trie-simple/issues/17))
+  Adds `Data.Trie.Map.lookupPrefixes` function
+
 # 0.4.3
 
 - No changes to the library itself

@@ -1,5 +1,5 @@
 name:                trie-simple
-version:             0.4.3
+version:             0.4.4
 synopsis:            Simple Map-based Trie
 description:
   A trie data structure @TMap c v@, to hold a mapping from list of characters (@[c]@) to
