@@ -23,7 +23,7 @@ fi
 # Run benchmark
 datestr="$(date -Iseconds)"
 benchfile="benchdata/bench-${datestr}.csv"
-cabal run trie-benchmark -- "--csv=$benchfile"
+cabal run trie-benchmark -c 'containers ==0.8' --allow-newer=*:containers -- "--csv=$benchfile"
 # Preprocess the output file
 sed \
   -e '1c Dataset,Name,MethodGroup,Method,Mean,SDx2' \
