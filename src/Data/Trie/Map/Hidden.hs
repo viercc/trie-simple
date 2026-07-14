@@ -76,7 +76,7 @@ import Data.Hashable.Lifted
 import Data.Hashable
 import Witherable
 import Data.These (These(..))
-import Data.Zip (Zip(..))
+import Data.Zip (Unzip(..), Zip(..), unzipDefault)
 import Data.Align ( Align(..), Semialign(..) )
 import Data.Matchable
 
@@ -191,6 +191,9 @@ instance Ord c => WitherableWithIndex [c] (TMap c) where
       mb = wither (f []) ma
       edges' = iwither child edges
       child c t = nonEmptyTMap <$> iwither (f . (c :)) t
+
+instance Unzip (TMap c) where
+  unzip = unzipDefault
 
 instance Ord c => Semialign (TMap c) where
   align (TMap (Node ma e1)) (TMap (Node mb e2)) = TMap (Node mc e')

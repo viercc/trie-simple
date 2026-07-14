@@ -1,3 +1,8 @@
+# 0.4.5
+
+- Migrates from `semialign-1.3` to `semialign-1.4`,
+  which introduces `Unzip` class as a parent of `Semialign` class.
+
 # 0.4.4
 
 - ([#7](https://github.com/viercc/trie-simple/issues/17))
